@@ -126,6 +126,9 @@ export default function CentralBankDashboard() {
   const [shockSeverity, setShockSeverity] = useState(0.1);
   const [autopilot, setAutopilot] = useState(false); // Mode Autopilot GMAE
 
+  // Mobile Active Tab State
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'controls' | 'regional'>('dashboard');
+
   // Simulation Results State
   const [simData, setSimData] = useState<SimulationDetails>(generateDefaultMockData());
   const [loading, setLoading] = useState(false);
@@ -173,11 +176,14 @@ export default function CentralBankDashboard() {
           setSimData(response.data);
         }
         await fetchHistory();
+        // UX Mobile: Otomatis alihkan ke tab Dashboard agar user HP langsung melihat grafik hasilnya
+        setActiveTab('dashboard');
       }
     } catch (error) {
       alert('Gagal terhubung ke backend Node.js! Menggunakan simulasi lokal.');
       const localSim = generateDefaultMockData();
       setSimData(localSim);
+      setActiveTab('dashboard');
     } finally {
       setLoading(false);
     }
@@ -195,6 +201,8 @@ export default function CentralBankDashboard() {
     setMoralAlignment(run.details.inputs.moral_alignment);
     setShockSeverity(run.details.inputs.shock_severity);
     setAutopilot(run.details.inputs.autopilot || false);
+    // Alihkan ke Dashboard tab saat memuat riwayat di HP
+    setActiveTab('dashboard');
   };
 
   const currentSummary = simData.summary;
@@ -263,36 +271,36 @@ export default function CentralBankDashboard() {
     <div className="flex-1 bg-[#08080d] text-slate-100 min-h-screen font-sans flex flex-col antialiased selection:bg-cyan-500/30 selection:text-cyan-300">
       
       {/* HEADER UTAMA */}
-      <header className="border-b border-slate-800/80 bg-slate-950/45 backdrop-blur-md sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="h-10 w-10 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center font-bold text-slate-900 text-xl tracking-wider shadow-lg shadow-cyan-500/20">
+      <header className="border-b border-slate-800/80 bg-slate-950/45 backdrop-blur-md sticky top-0 z-40 px-4 md:px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center space-x-2 md:space-x-3">
+          <div className="h-9 w-9 md:h-10 md:w-10 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center font-bold text-slate-900 text-lg md:text-xl tracking-wider shadow-lg shadow-cyan-500/20">
             Ω
           </div>
           <div>
-            <h1 className="text-lg font-bold tracking-wider text-slate-100 flex items-center">
+            <h1 className="text-sm md:text-lg font-bold tracking-wider text-slate-100 flex items-center">
               GMA AUTHORITY
-              <span className="ml-3 text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full border border-cyan-500/30 text-cyan-400 bg-cyan-950/45">
+              <span className="hidden sm:inline-block ml-3 text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full border border-cyan-500/30 text-cyan-400 bg-cyan-950/45">
                 AI Governor Active
               </span>
             </h1>
-            <p className="text-[11px] text-slate-400/80 tracking-wide">
-              Global Algorithmic Monetary Authority — Protokol Pengendali Keseimbangan GMAE
+            <p className="text-[10px] md:text-[11px] text-slate-400/80 tracking-wide truncate max-w-[210px] sm:max-w-none">
+              Global Algorithmic Monetary Authority — GMAE Protocol Controller
             </p>
           </div>
         </div>
         
-        {/* Kontrol Cepat Autopilot di Header */}
-        <div className="hidden md:flex items-center space-x-4 bg-slate-950/70 border border-slate-800 rounded-lg px-4 py-1.5">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Protokol Stabilizer</span>
+        {/* Kontrol Autopilot di Header */}
+        <div className="flex items-center space-x-2 bg-slate-950/70 border border-slate-800 rounded-lg px-2.5 py-1">
+          <span className="hidden lg:inline-block text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-2">Protokol Stabilizer</span>
           <button 
             onClick={() => setAutopilot(!autopilot)}
-            className={`text-xs font-semibold px-3 py-1 rounded transition-all ${autopilot ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20 font-extrabold' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+            className={`text-[10px] md:text-xs font-bold px-2 py-1 md:px-3 md:py-1 rounded transition-all ${autopilot ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20 font-extrabold' : 'bg-slate-850 text-slate-400 hover:bg-slate-800'}`}
           >
             {autopilot ? 'AUTOPILOT: ON' : 'AUTOPILOT: OFF'}
           </button>
         </div>
 
-        <div className="flex items-center space-x-6 text-xs text-slate-400">
+        <div className="hidden xl:flex items-center space-x-6 text-xs text-slate-400">
           <div className="flex items-center space-x-2">
             <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-md shadow-emerald-500/40"></span>
             <span>Database: <strong className="text-slate-200">{dbStatus || 'Loading...'}</strong></span>
@@ -303,93 +311,111 @@ export default function CentralBankDashboard() {
         </div>
       </header>
 
-      {/* DASHBOARD RINGKASAN METRIK GLOBAL */}
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6 bg-slate-950/20 border-b border-slate-900">
+      {/* DASHBOARD RINGKASAN METRIK GLOBAL (Grid 2x2 di HP, 4x1 di Desktop) */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 p-4 md:p-6 bg-slate-950/20 border-b border-slate-900">
         
         {/* Card 1: Trust Level */}
-        <div className="p-4 rounded-xl border border-slate-800/60 bg-slate-950/40 hover:border-slate-700/60 transition-all flex flex-col justify-between">
+        <div className="p-3 md:p-4 rounded-xl border border-slate-850 bg-slate-950/40 hover:border-slate-800 transition-all flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <span className="text-xs font-semibold text-slate-400 tracking-wide uppercase">GMAE Trust Index</span>
-            <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-cyan-950/60 text-cyan-400 border border-cyan-500/20">T_t</span>
+            <span className="text-[10px] md:text-xs font-semibold text-slate-400 tracking-wide uppercase">GMAE Trust</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-cyan-950/60 text-cyan-400 border border-cyan-500/20">T_t</span>
           </div>
-          <div className="my-2">
-            <h3 className="text-3xl font-extrabold font-mono text-cyan-400">
+          <div className="my-1.5">
+            <h3 className="text-xl md:text-3xl font-extrabold font-mono text-cyan-400">
               {(latestStep.trust * 100).toFixed(1)}%
             </h3>
-            <div className={`mt-2 text-[10px] px-2 py-1 rounded-md border inline-block ${stability.color}`}>
+            <div className={`mt-1 text-[9px] px-1.5 py-0.5 rounded border inline-block ${stability.color}`}>
               {stability.label}
             </div>
           </div>
-          <p className="text-[10px] text-slate-400">Tingkat kepercayaan endogen publik terhadap kebijakan AI.</p>
         </div>
 
         {/* Card 2: Broad Money Supply (M3) */}
-        <div className="p-4 rounded-xl border border-slate-800/60 bg-slate-950/40 hover:border-slate-700/60 transition-all flex flex-col justify-between">
+        <div className="p-3 md:p-4 rounded-xl border border-slate-850 bg-slate-950/40 hover:border-slate-800 transition-all flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <span className="text-xs font-semibold text-slate-400 tracking-wide uppercase">Broad Money Supply (M3)</span>
-            <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-indigo-950/60 text-indigo-400 border border-indigo-500/20">Aggregates</span>
+            <span className="text-[10px] md:text-xs font-semibold text-slate-400 tracking-wide uppercase">Money Supply (M3)</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-indigo-950/60 text-indigo-400 border border-indigo-500/20">M3</span>
           </div>
-          <div className="my-2">
-            <h3 className="text-3xl font-extrabold font-mono text-indigo-400">
-              {latestStep.m3.toLocaleString()} <span className="text-xs font-normal text-slate-400">GMA</span>
+          <div className="my-1.5">
+            <h3 className="text-xl md:text-3xl font-extrabold font-mono text-indigo-400 truncate">
+              {latestStep.m3.toLocaleString()} <span className="text-[10px] font-normal text-slate-400">GMA</span>
             </h3>
-            <p className="text-[11px] text-slate-300 mt-2">
-              M1: <strong className="font-mono text-slate-100">{latestStep.m1.toLocaleString()}</strong> | M2: <strong className="font-mono text-slate-100">{latestStep.m2.toLocaleString()}</strong>
+            <p className="text-[9px] md:text-[11px] text-slate-400 truncate mt-1">
+              M1: {latestStep.m1.toLocaleString()} | M2: {latestStep.m2.toLocaleString()}
             </p>
           </div>
-          <p className="text-[10px] text-slate-400">Total suplai uang broad money yang bersirkulasi secara global.</p>
         </div>
 
         {/* Card 3: Inflation Rate */}
-        <div className="p-4 rounded-xl border border-slate-800/60 bg-slate-950/40 hover:border-slate-700/60 transition-all flex flex-col justify-between">
+        <div className="p-3 md:p-4 rounded-xl border border-slate-850 bg-slate-950/40 hover:border-slate-800 transition-all flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <span className="text-xs font-semibold text-slate-400 tracking-wide uppercase">Global Inflation Rate</span>
-            <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-rose-950/60 text-rose-400 border border-rose-500/20">π_t</span>
+            <span className="text-[10px] md:text-xs font-semibold text-slate-400 tracking-wide uppercase">Inflation Rate</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-rose-950/60 text-rose-400 border border-rose-500/20">π_t</span>
           </div>
-          <div className="my-2">
-            <h3 className={`text-3xl font-extrabold font-mono ${latestStep.inflation > 15 ? 'text-rose-500' : latestStep.inflation > 5 ? 'text-amber-400' : 'text-emerald-400'}`}>
+          <div className="my-1.5">
+            <h3 className={`text-xl md:text-3xl font-extrabold font-mono ${latestStep.inflation > 15 ? 'text-rose-500' : latestStep.inflation > 5 ? 'text-amber-400' : 'text-emerald-400'}`}>
               {latestStep.inflation.toFixed(2)}%
             </h3>
-            <p className="text-[11px] text-slate-400 mt-2">
-              Target Stabilitas Moneter: <strong className="text-slate-200">2.0%</strong>
+            <p className="text-[9px] md:text-[11px] text-slate-400 mt-1">
+              Target: <strong className="text-slate-300">2.0%</strong>
             </p>
           </div>
-          <p className="text-[10px] text-slate-400">Tekanan inflasi hasil dari devaluasi trust atau guncangan pasar.</p>
         </div>
 
         {/* Card 4: Base Policy Rate */}
-        <div className="p-4 rounded-xl border border-slate-800/60 bg-slate-950/40 hover:border-slate-700/60 transition-all flex flex-col justify-between">
+        <div className="p-3 md:p-4 rounded-xl border border-slate-850 bg-slate-950/40 hover:border-slate-800 transition-all flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <span className="text-xs font-semibold text-slate-400 tracking-wide uppercase">AI Policy Interest Rate</span>
-            <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-amber-950/60 text-amber-400 border border-amber-500/20">r_t</span>
+            <span className="text-[10px] md:text-xs font-semibold text-slate-400 tracking-wide uppercase">AI Policy Rate</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-amber-950/60 text-amber-400 border border-amber-500/20">r_t</span>
           </div>
-          <div className="my-2">
-            <h3 className="text-3xl font-extrabold font-mono text-amber-400">
+          <div className="my-1.5">
+            <h3 className="text-xl md:text-3xl font-extrabold font-mono text-amber-400">
               {latestStep.interest_rate.toFixed(2)}%
             </h3>
-            <p className="text-[11px] text-slate-400 mt-2">
-              Model Respons: <strong className="text-slate-200">Keseimbangan Dinamis</strong>
+            <p className="text-[9px] md:text-[11px] text-slate-400 mt-1">
+              Feedback: <strong className="text-slate-300">Otonom PID</strong>
             </p>
           </div>
-          <p className="text-[10px] text-slate-400">Suku bunga acuan yang dimodulasi secara otonom oleh AI Governor.</p>
         </div>
       </section>
 
-      {/* BODY UTAMA: 3 PANEL GRID */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
+      {/* MOBILE BAR MENU (Hanya muncul di HP / layar kecil) */}
+      <div className="lg:hidden flex border-b border-slate-900 bg-slate-950/80 sticky top-[69px] z-30">
+        <button 
+          onClick={() => setActiveTab('dashboard')}
+          className={`flex-1 py-3 text-[11px] font-bold tracking-wider uppercase border-b-2 text-center transition-all ${activeTab === 'dashboard' ? 'border-cyan-500 text-cyan-400 bg-cyan-950/5' : 'border-transparent text-slate-400'}`}
+        >
+          Dashboard & Grafik
+        </button>
+        <button 
+          onClick={() => setActiveTab('controls')}
+          className={`flex-1 py-3 text-[11px] font-bold tracking-wider uppercase border-b-2 text-center transition-all ${activeTab === 'controls' ? 'border-cyan-500 text-cyan-400 bg-cyan-950/5' : 'border-transparent text-slate-400'}`}
+        >
+          Sliders Kebijakan
+        </button>
+        <button 
+          onClick={() => setActiveTab('regional')}
+          className={`flex-1 py-3 text-[11px] font-bold tracking-wider uppercase border-b-2 text-center transition-all ${activeTab === 'regional' ? 'border-cyan-500 text-cyan-400 bg-cyan-950/5' : 'border-transparent text-slate-400'}`}
+        >
+          Wilayah & Log
+        </button>
+      </div>
+
+      {/* BODY UTAMA: TIGA PANEL YANG RESPONSIVE */}
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 md:p-6">
         
-        {/* PANEL KIRI: MONETARY & GMAE CONTROL PANEL */}
-        <section className="lg:col-span-4 flex flex-col space-y-4">
+        {/* PANEL KIRI: MONETARY & GMAE CONTROL PANEL (Lg: col-span-4) */}
+        <section className={`lg:col-span-4 flex flex-col space-y-4 ${activeTab === 'controls' ? 'block' : 'hidden lg:block'}`}>
           
-          {/* Card Penjelasan Protokol Stabilitas Otonom */}
+          {/* Card Penjelasan Autopilot */}
           {autopilot && (
             <div className="p-4 rounded-xl border border-cyan-500/30 bg-cyan-950/20 text-xs text-cyan-200 leading-relaxed shadow-lg shadow-cyan-500/5">
               <h4 className="font-bold text-cyan-300 uppercase tracking-wider mb-1 flex items-center">
-                <span className="mr-2 h-2.5 w-2.5 rounded-full bg-cyan-500 animate-pulse"></span>
+                <span className="mr-2 h-2 w-2 rounded-full bg-cyan-500 animate-pulse"></span>
                 Protokol Stabilitas Otonom Aktif
               </h4>
               <p>
-                Sistem CBDC saat ini mengabaikan input parameter manual. AI mengunci <strong>Transparansi pada 95%</strong> dan menerapkan pertahanan kriptografis enklaf moneter untuk meredam <strong>Kebocoran menjadi 2%</strong>.
+                Sistem CBDC mengunci parameter kebijakan: <strong>Transparansi diset 95%</strong> dan enkripsi meminimalisir <strong>Kebocoran menjadi 2%</strong> secara otonom.
               </p>
               <div className="mt-2 font-mono text-[10px] text-cyan-400">
                 &gt;_ PID_Stabilizer: ACTIVE // Shock_Dampening: 85%
@@ -397,17 +423,17 @@ export default function CentralBankDashboard() {
             </div>
           )}
 
-          <div className="p-5 rounded-xl border border-slate-800/80 bg-slate-950/50 backdrop-blur-md flex flex-col space-y-5">
+          <div className="p-4 md:p-5 rounded-xl border border-slate-800/80 bg-slate-950/50 backdrop-blur-md flex flex-col space-y-5">
             <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-100 border-b border-slate-800 pb-2 flex justify-between items-center">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-100 border-b border-slate-850 pb-2 flex justify-between items-center">
                 <span>Instruksi Kebijakan</span>
-                <span className="text-[10px] font-mono text-slate-400">Autopilot overrides sliders</span>
+                <span className="text-[9px] font-mono text-slate-400">Autopilot overrides sliders</span>
               </h2>
             </div>
 
             {/* Nama Simulasi */}
-            <div className="flex flex-col space-y-2">
-              <label className="text-xs font-semibold text-slate-300">Nama Kebijakan Simulasi</label>
+            <div className="flex flex-col space-y-1.5">
+              <label className="text-[11px] font-semibold text-slate-350">Nama Kebijakan Simulasi</label>
               <input 
                 type="text"
                 value={runName}
@@ -417,20 +443,9 @@ export default function CentralBankDashboard() {
               />
             </div>
 
-            {/* Switch Autopilot Mobile / Sampingan */}
-            <div className="flex items-center justify-between p-3 rounded-lg border border-slate-850 bg-slate-950/70 md:hidden">
-              <span className="text-xs font-bold text-slate-300">GMAE Autopilot Mode</span>
-              <button 
-                onClick={() => setAutopilot(!autopilot)}
-                className={`text-xs font-bold px-3 py-1.5 rounded ${autopilot ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800 text-slate-400'}`}
-              >
-                {autopilot ? 'AKTIF' : 'NONAKTIF'}
-              </button>
-            </div>
-
             {/* SLIDERS: MONETARY TARGETS */}
             <div className={`space-y-4 transition-all ${autopilot ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-              <h3 className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Target Agregat Moneter</h3>
+              <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Target Agregat Moneter</h3>
               
               {/* Slider M1 */}
               <div className="flex flex-col space-y-1">
@@ -442,7 +457,7 @@ export default function CentralBankDashboard() {
                   type="range" min="500" max="3000" step="100"
                   disabled={autopilot}
                   value={m1} onChange={(e) => setM1(Number(e.target.value))}
-                  className="w-full accent-cyan-500 bg-slate-800 h-1 rounded-lg appearance-none cursor-pointer"
+                  className="w-full accent-cyan-500 bg-slate-800 h-2 rounded-lg appearance-none cursor-pointer"
                 />
               </div>
 
@@ -456,7 +471,7 @@ export default function CentralBankDashboard() {
                   type="range" min="1500" max="8000" step="100"
                   disabled={autopilot}
                   value={m2} onChange={(e) => setM2(Number(e.target.value))}
-                  className="w-full accent-indigo-500 bg-slate-800 h-1 rounded-lg appearance-none cursor-pointer"
+                  className="w-full accent-indigo-500 bg-slate-800 h-2 rounded-lg appearance-none cursor-pointer"
                 />
               </div>
 
@@ -470,14 +485,14 @@ export default function CentralBankDashboard() {
                   type="range" min="4000" max="20000" step="200"
                   disabled={autopilot}
                   value={m3} onChange={(e) => setM3(Number(e.target.value))}
-                  className="w-full accent-violet-500 bg-slate-800 h-1 rounded-lg appearance-none cursor-pointer"
+                  className="w-full accent-violet-500 bg-slate-800 h-2 rounded-lg appearance-none cursor-pointer"
                 />
               </div>
             </div>
 
             {/* SLIDERS: GMAE MODEL FACTORS */}
             <div className={`space-y-4 pt-2 border-t border-slate-900 transition-all ${autopilot ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-              <h3 className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Variabel GMAE (Paper Model)</h3>
+              <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Variabel GMAE (Paper Model)</h3>
 
               {/* Algorithmic Transparency */}
               <div className="flex flex-col space-y-1">
@@ -489,7 +504,7 @@ export default function CentralBankDashboard() {
                   type="range" min="0" max="1" step="0.05"
                   disabled={autopilot}
                   value={transparency} onChange={(e) => setTransparency(Number(e.target.value))}
-                  className="w-full accent-cyan-500 bg-slate-800 h-1 rounded-lg appearance-none cursor-pointer"
+                  className="w-full accent-cyan-500 bg-slate-800 h-2 rounded-lg appearance-none cursor-pointer"
                 />
               </div>
 
@@ -503,7 +518,7 @@ export default function CentralBankDashboard() {
                   type="range" min="0" max="1" step="0.05"
                   disabled={autopilot}
                   value={leakage} onChange={(e) => setLeakage(Number(e.target.value))}
-                  className="w-full accent-rose-500 bg-slate-800 h-1 rounded-lg appearance-none cursor-pointer"
+                  className="w-full accent-rose-500 bg-slate-800 h-2 rounded-lg appearance-none cursor-pointer"
                 />
               </div>
 
@@ -517,14 +532,14 @@ export default function CentralBankDashboard() {
                   type="range" min="0" max="1" step="0.05"
                   disabled={autopilot}
                   value={moralAlignment} onChange={(e) => setMoralAlignment(Number(e.target.value))}
-                  className="w-full accent-emerald-500 bg-slate-800 h-1 rounded-lg appearance-none cursor-pointer"
+                  className="w-full accent-emerald-500 bg-slate-800 h-2 rounded-lg appearance-none cursor-pointer"
                 />
               </div>
             </div>
 
-            {/* Slider Shock Tetap Aktif di Autopilot untuk Menguji Ketangguhan */}
+            {/* Stress Test */}
             <div className="space-y-4 pt-2 border-t border-slate-900">
-              <h3 className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Pengujian Stress Test</h3>
+              <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Pengujian Stress Test</h3>
               <div className="flex flex-col space-y-1">
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-350">Economic Shock Severity (ε)</span>
@@ -533,7 +548,7 @@ export default function CentralBankDashboard() {
                 <input 
                   type="range" min="0" max="1" step="0.05"
                   value={shockSeverity} onChange={(e) => setShockSeverity(Number(e.target.value))}
-                  className="w-full accent-amber-500 bg-slate-850 h-1.5 rounded-lg appearance-none cursor-pointer"
+                  className="w-full accent-amber-500 bg-slate-850 h-2 rounded-lg appearance-none cursor-pointer"
                 />
               </div>
             </div>
@@ -542,25 +557,25 @@ export default function CentralBankDashboard() {
             <button
               onClick={handleSimulate}
               disabled={loading}
-              className="w-full bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-slate-950 font-bold py-2.5 px-4 rounded-lg text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-slate-950 font-bold py-3 px-4 rounded-lg text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Menghitung Equilibria...' : 'Simulasikan Kebijakan Moneter'}
             </button>
           </div>
         </section>
 
-        {/* PANEL TENGAH: GRAFIK & ANALISIS WILAYAH */}
-        <section className="lg:col-span-5 flex flex-col space-y-6">
+        {/* PANEL TENGAH: GRAFIK & ANALISIS WILAYAH (Lg: col-span-5) */}
+        <section className={`lg:col-span-5 flex flex-col space-y-6 ${activeTab === 'dashboard' ? 'block' : 'hidden lg:block'}`}>
           
           {/* VISUALISASI GRAFIK 1: GMAE TRUST & INFLASI */}
-          <div className="p-5 rounded-xl border border-slate-800/80 bg-slate-950/50 backdrop-blur-md flex flex-col">
+          <div className="p-4 md:p-5 rounded-xl border border-slate-800/80 bg-slate-950/50 backdrop-blur-md flex flex-col">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-100 border-b border-slate-800 pb-2 flex justify-between">
               <span>GMAE Trust & Stabilitas Dinamis</span>
               <span className="text-slate-400 lowercase font-normal">30-Period Timeline</span>
             </h2>
 
             {/* SVG Chart 1 */}
-            <div className="relative mt-4 flex justify-center bg-slate-950/50 border border-slate-900 rounded-lg p-2 overflow-hidden">
+            <div className="relative mt-4 flex justify-center bg-slate-950/50 border border-slate-900 rounded-lg p-1 md:p-2 overflow-hidden">
               <svg width={chartW} height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} className="w-full h-auto">
                 {/* Grid Lines */}
                 {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
@@ -569,7 +584,7 @@ export default function CentralBankDashboard() {
                     <line key={idx} x1={padding} y1={y} x2={chartW - padding} y2={y} stroke="#1f2937" strokeDasharray="3 3" />
                   );
                 })}
-                {/* Vertical Shock Zone Marker (Periode 10-15) */}
+                {/* Shock Zone Marker */}
                 <rect 
                   x={padding + (9 / 29) * (chartW - 2 * padding)} 
                   y={padding} 
@@ -581,17 +596,14 @@ export default function CentralBankDashboard() {
                 />
                 
                 {/* Lines */}
-                {/* 1. GMAE Trust (Cyan) */}
                 <path
                   d={getSvgPath(trustPoints, 0, 100)}
                   fill="none" stroke="#22d3ee" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                 />
-                {/* 2. Inflation Rate (Red) */}
                 <path
                   d={getSvgPath(inflationPoints, -2, 50)}
                   fill="none" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="4 2" strokeLinecap="round" strokeLinejoin="round"
                 />
-                {/* 3. Interest Rate (Amber) */}
                 <path
                   d={getSvgPath(interestPoints, 0, 20)}
                   fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
@@ -604,40 +616,38 @@ export default function CentralBankDashboard() {
                 <text x={padding + (11 / 29) * (chartW - 2 * padding)} y={chartH - padding - 8} fill="#f87171" fontSize="8" fontFamily="sans-serif">Shock Zone</text>
               </svg>
             </div>
-            <p className="text-[10px] text-slate-400 mt-2 text-center">
+            <p className="text-[10px] text-slate-400 mt-2 text-center leading-relaxed px-1">
               {autopilot 
-                ? "Autopilot Aktif: Kurva Trust bertahan sangat kuat di atas 90%, menekan lonjakan inflasi mendekati garis lurus stabil."
+                ? "Autopilot Aktif: Kurva Trust bertahan sangat kuat di atas 92%, menekan lonjakan inflasi mendekati target jangkar 2%."
                 : "*Arsir merah mewakili guncangan eksternal (External Shock Zone) pada Periode 10–15."}
             </p>
           </div>
 
           {/* VISUALISASI GRAFIK 2: MONETARY AGGREGATES */}
-          <div className="p-5 rounded-xl border border-slate-800/80 bg-slate-950/50 backdrop-blur-md flex flex-col">
+          <div className="p-4 md:p-5 rounded-xl border border-slate-800/80 bg-slate-950/50 backdrop-blur-md flex flex-col">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-100 border-b border-slate-800 pb-2 flex justify-between">
               <span>Aliran Suplai Uang Dinamis (M1, M2, M3)</span>
               <span className="text-slate-400 lowercase font-normal">Liquidity shifts</span>
             </h2>
 
             {/* SVG Chart 2 */}
-            <div className="relative mt-4 flex justify-center bg-slate-950/50 border border-slate-900 rounded-lg p-2 overflow-hidden">
+            <div className="relative mt-4 flex justify-center bg-slate-950/50 border border-slate-900 rounded-lg p-1 md:p-2 overflow-hidden">
               <svg width={chartW} height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} className="w-full h-auto">
-                {/* Area M3 (Broad Money) */}
+                {/* Areas */}
                 <path
                   d={getSvgAreaPath(m3Points, m2Points, 0, maxMonetaryVal)}
                   fill="rgba(124, 58, 237, 0.15)" stroke="none"
                 />
-                {/* Area M2 (Savings) */}
                 <path
                   d={getSvgAreaPath(m2Points, m1Points, 0, maxMonetaryVal)}
                   fill="rgba(79, 70, 229, 0.25)" stroke="none"
                 />
-                {/* Area M1 (Liquidity) */}
                 <path
                   d={getSvgAreaPath(m1Points, currentHistory.map(() => 0), 0, maxMonetaryVal)}
                   fill="rgba(6, 182, 212, 0.35)" stroke="none"
                 />
 
-                {/* Lines boundary */}
+                {/* Lines */}
                 <path d={getSvgPath(m3Points, 0, maxMonetaryVal)} fill="none" stroke="#a78bfa" strokeWidth="1.5" />
                 <path d={getSvgPath(m2Points, 0, maxMonetaryVal)} fill="none" stroke="#6366f1" strokeWidth="1.5" />
                 <path d={getSvgPath(m1Points, 0, maxMonetaryVal)} fill="none" stroke="#06b6d4" strokeWidth="2" />
@@ -648,7 +658,7 @@ export default function CentralBankDashboard() {
                 <text x={padding + 250} y={padding + 15} fill="#06b6d4" fontSize="9" fontFamily="monospace">■ M1 (Cash/Liquidity)</text>
               </svg>
             </div>
-            <p className="text-[10px] text-slate-400 mt-2 text-center">
+            <p className="text-[10px] text-slate-400 mt-2 text-center leading-relaxed px-1">
               {autopilot 
                 ? "Autopilot Aktif: M3 dan M1 tidak mengalami anomali kepanikan likuiditas. Aliran dana tersalurkan konstan."
                 : "Ketidakstabilan GMAE memicu likuidasi dana berjangka (M3) masuk ke wadah likuiditas tunai (M1)."}
@@ -656,19 +666,19 @@ export default function CentralBankDashboard() {
           </div>
         </section>
 
-        {/* PANEL KANAN: WILAYAH FINANSIAL & RIWAYAT SIMULASI */}
-        <section className="lg:col-span-3 flex flex-col space-y-6">
+        {/* PANEL KANAN: WILAYAH FINANSIAL & RIWAYAT SIMULASI (Lg: col-span-3) */}
+        <section className={`lg:col-span-3 flex flex-col space-y-6 ${activeTab === 'regional' ? 'block' : 'hidden lg:block'}`}>
           
           {/* WILAYAH FINANSIAL DUNIA */}
-          <div className="p-5 rounded-xl border border-slate-800/80 bg-slate-950/50 backdrop-blur-md flex flex-col">
+          <div className="p-4 md:p-5 rounded-xl border border-slate-800/80 bg-slate-950/50 backdrop-blur-md flex flex-col">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-100 border-b border-slate-800 pb-2">
               Status Finansial Wilayah
             </h2>
             
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-3">
               
               {/* FED (USD) */}
-              <div className="bg-[#0f0f1c] border border-slate-850 p-3 rounded-lg flex flex-col space-y-1">
+              <div className="bg-[#0f0f1c] border border-slate-850 p-2.5 md:p-3 rounded-lg flex flex-col space-y-1">
                 <div className="flex justify-between text-xs">
                   <span className="font-bold text-slate-300">FED Zone (USD)</span>
                   <span className="font-mono text-cyan-400">{(latestStep.regions.fed.trust * 100).toFixed(1)}% T</span>
@@ -683,7 +693,7 @@ export default function CentralBankDashboard() {
               </div>
 
               {/* ECB (EUR) */}
-              <div className="bg-[#0f0f1c] border border-slate-850 p-3 rounded-lg flex flex-col space-y-1">
+              <div className="bg-[#0f0f1c] border border-slate-850 p-2.5 md:p-3 rounded-lg flex flex-col space-y-1">
                 <div className="flex justify-between text-xs">
                   <span className="font-bold text-slate-300">EURO Zone (EUR)</span>
                   <span className="font-mono text-cyan-400">{(latestStep.regions.eur.trust * 100).toFixed(1)}% T</span>
@@ -698,7 +708,7 @@ export default function CentralBankDashboard() {
               </div>
 
               {/* ASIA-PACIFIC */}
-              <div className="bg-[#0f0f1c] border border-slate-850 p-3 rounded-lg flex flex-col space-y-1">
+              <div className="bg-[#0f0f1c] border border-slate-850 p-2.5 md:p-3 rounded-lg flex flex-col space-y-1">
                 <div className="flex justify-between text-xs">
                   <span className="font-bold text-slate-300">Asia-Pacific Zone</span>
                   <span className="font-mono text-cyan-400">{(latestStep.regions.asia.trust * 100).toFixed(1)}% T</span>
@@ -713,7 +723,7 @@ export default function CentralBankDashboard() {
               </div>
 
               {/* ASEAN (IDR) */}
-              <div className="bg-[#0f0f1c] border border-slate-850 p-3 rounded-lg flex flex-col space-y-1">
+              <div className="bg-[#0f0f1c] border border-slate-850 p-2.5 md:p-3 rounded-lg flex flex-col space-y-1">
                 <div className="flex justify-between text-xs">
                   <span className="font-bold text-emerald-400">ASEAN Zone (IDR)</span>
                   <span className="font-mono text-cyan-400">{(latestStep.regions.asean.trust * 100).toFixed(1)}% T</span>
@@ -731,7 +741,7 @@ export default function CentralBankDashboard() {
           </div>
 
           {/* RIWAYAT SIMULASI DI DATABASE */}
-          <div className="p-5 rounded-xl border border-slate-800/80 bg-slate-950/50 backdrop-blur-md flex flex-col flex-1 min-h-[200px]">
+          <div className="p-4 md:p-5 rounded-xl border border-slate-800/80 bg-slate-950/50 backdrop-blur-md flex flex-col flex-1 min-h-[200px]">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-100 border-b border-slate-800 pb-2">
               Log Riwayat Kebijakan
             </h2>
