@@ -133,6 +133,47 @@ export async function POST(request: Request) {
     const avg_trust = history.reduce((sum, item) => sum + item.trust, 0) / history.length;
     const final_inflation = history[history.length - 1].inflation;
     const final_interest = history[history.length - 1].interest_rate;
+    const final_trust = history[history.length - 1].trust;
+
+    // --- KALKULASI MATRIKS JACOBIAN FORMAL (Sistem Dinamis 2D Trust & Inflasi) ---
+    // J = [[dT_t/dT_{t-1}, dT_t/d\pi_{t-1}],
+    //      [d\pi_t/dT_{t-1}, d\pi_t/d\pi_{t-1}]]
+    const j11 = autopilot ? 0.92 : 0.80; // Kecepatan peluruhan trust
+    const j12 = autopilot ? -0.01 : -0.05; // Pengaruh inflasi masa lalu terhadap trust
+    const j21 = -30.0 * (1.0 - final_trust); // Elastisitas inflasi terhadap trust collapse (non-linier)
+    const j22 = autopilot ? 0.05 : 0.15; // Inersia inflasi
+
+    const trace = j11 + j22;
+    const determinant = (j11 * j22) - (j12 * j21);
+
+    // Hitung Eigenvalues lambda^2 - Trace*lambda + Det = 0
+    const discriminant = (trace * trace) - (4 * determinant);
+    let eigen1 = { real: 0, imag: 0, magnitude: 0 };
+    let eigen2 = { real: 0, imag: 0, magnitude: 0 };
+
+    if (discriminant >= 0) {
+      const r1 = (trace + Math.sqrt(discriminant)) / 2;
+      const r2 = (trace - Math.sqrt(discriminant)) / 2;
+      eigen1 = { real: parseFloat(r1.toFixed(4)), imag: 0, magnitude: parseFloat(Math.abs(r1).toFixed(4)) };
+      eigen2 = { real: parseFloat(r2.toFixed(4)), imag: 0, magnitude: parseFloat(Math.abs(r2).toFixed(4)) };
+    } else {
+      const real = trace / 2;
+      const imag = Math.sqrt(-discriminant) / 2;
+      const magnitude = Math.sqrt(real * real + imag * imag);
+      eigen1 = { real: parseFloat(real.toFixed(4)), imag: parseFloat(imag.toFixed(4)), magnitude: parseFloat(magnitude.toFixed(4)) };
+      eigen2 = { real: parseFloat(real.toFixed(4)), imag: parseFloat((-imag).toFixed(4)), magnitude: parseFloat(magnitude.toFixed(4)) };
+    }
+
+    // Sistem stabil jika kedua magnitudo eigenvalue < 1 (Discrete-time system stability)
+    const isStable = eigen1.magnitude < 1.0 && eigen2.magnitude < 1.0;
+
+    const jacobianAnalysis = {
+      matrix: { j11, j12, j21, j22 },
+      trace: parseFloat(trace.toFixed(4)),
+      determinant: parseFloat(determinant.toFixed(4)),
+      eigenvalues: [eigen1, eigen2],
+      stable: isStable
+    };
 
     const simulationDetails = {
       inputs: { 
@@ -152,8 +193,9 @@ export async function POST(request: Request) {
         avg_trust, 
         final_inflation, 
         final_interest,
-        final_trust: history[history.length - 1].trust
-      }
+        final_trust
+      },
+      jacobian: jacobianAnalysis
     };
 
     // Simpan hasil ke Database PostgreSQL

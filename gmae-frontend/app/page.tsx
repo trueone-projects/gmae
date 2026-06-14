@@ -26,6 +26,23 @@ interface SimulationStep {
   };
 }
 
+interface JacobianAnalysis {
+  matrix: {
+    j11: number;
+    j12: number;
+    j21: number;
+    j22: number;
+  };
+  trace: number;
+  determinant: number;
+  eigenvalues: {
+    real: number;
+    imag: number;
+    magnitude: number;
+  }[];
+  stable: boolean;
+}
+
 interface SimulationDetails {
   inputs: {
     m1: number;
@@ -46,6 +63,7 @@ interface SimulationDetails {
     final_interest: number;
     final_trust: number;
   };
+  jacobian?: JacobianAnalysis;
 }
 
 interface HistoryRun {
@@ -114,6 +132,16 @@ const generateDefaultMockData = (): SimulationDetails => {
       final_inflation: history[29].inflation,
       final_interest: history[29].interest_rate,
       final_trust: history[29].trust
+    },
+    jacobian: {
+      matrix: { j11: 0.8, j12: -0.05, j21: -10.5, j22: 0.15 },
+      trace: 0.95,
+      determinant: -0.405,
+      eigenvalues: [
+        { real: 0.475, imag: 0.457, magnitude: 0.659 },
+        { real: 0.475, imag: -0.457, magnitude: 0.659 }
+      ],
+      stable: true
     }
   };
 };
@@ -216,6 +244,41 @@ export default function CentralBankDashboard() {
     setActiveTab('governor');
   };
 
+  // Preset Scenario Loader
+  const loadScenarioPreset = (scenarioNum: number) => {
+    if (scenarioNum === 1) {
+      setRunName('Skenario 1: Transparansi Tinggi');
+      setM1(1000); setM2(3000); setM3(8000);
+      setTransparency(0.9); setLeakage(0.05); setMoralAlignment(0.9);
+      setShockSeverity(0.05); setOilPrice(70); setGoldPrice(2400);
+      setAutopilot(false);
+    } else if (scenarioNum === 2) {
+      setRunName('Skenario 2: Kebocoran & Opasitas');
+      setM1(1500); setM2(3500); setM3(9000);
+      setTransparency(0.3); setLeakage(0.7); setMoralAlignment(0.4);
+      setShockSeverity(0.2); setOilPrice(95); setGoldPrice(2000);
+      setAutopilot(false);
+    } else if (scenarioNum === 3) {
+      setRunName('Skenario 3: Instabilitas Teknokrasi');
+      setM1(1200); setM2(3200); setM3(8500);
+      setTransparency(0.6); setLeakage(0.4); setMoralAlignment(0.8);
+      setShockSeverity(0.5); setOilPrice(120); setGoldPrice(2200);
+      setAutopilot(false);
+    } else if (scenarioNum === 4) {
+      setRunName('Skenario 4: Kolaps Moral-Algoritmik');
+      setM1(1800); setM2(4000); setM3(10000);
+      setTransparency(0.1); setLeakage(0.8); setMoralAlignment(0.1);
+      setShockSeverity(0.6); setOilPrice(140); setGoldPrice(1700);
+      setAutopilot(false);
+    } else if (scenarioNum === 5) {
+      setRunName('Skenario 5: Stabilisasi Otonom');
+      setM1(1000); setM2(3000); setM3(8000);
+      setTransparency(0.95); setLeakage(0.02); setMoralAlignment(0.95);
+      setShockSeverity(0.35); setOilPrice(110); setGoldPrice(2350);
+      setAutopilot(true);
+    }
+  };
+
   const currentSummary = simData.summary;
   const currentHistory = simData.history;
   const latestStep = currentHistory[currentHistory.length - 1];
@@ -223,8 +286,8 @@ export default function CentralBankDashboard() {
   // Helper stabilitas
   const getStabilityStatus = (trust: number, inflation: number) => {
     if (trust > 0.6 && inflation < 5.0) return { label: 'Optimal Stability', color: 'text-[#008082] bg-[#e1f3f3]/60 border-[#008082]/20' };
-    if (trust > 0.3 && inflation < 12.0) return { label: 'Moderate Volatility', color: 'text-amber-700 bg-amber-50 border-amber-200' };
-    return { label: 'Sovereign Strain', color: 'text-rose-700 bg-rose-50 border-rose-200' };
+    if (trust > 0.3 && inflation < 12.0) return { label: 'Moderate Volatility', color: 'text-amber-700 bg-amber-55/60 border-amber-200/50' };
+    return { label: 'Sovereign Strain', color: 'text-rose-700 bg-rose-55/60 border-rose-200/50' };
   };
 
   const stability = getStabilityStatus(latestStep.trust, latestStep.inflation);
@@ -383,6 +446,53 @@ export default function CentralBankDashboard() {
         {/* TAB 1: MONETARY GOVERNOR */}
         {activeTab === 'governor' && (
           <div className="space-y-6">
+
+            {/* PRESET SCENARIO MANAGER (Quick verification tool from paper) */}
+            <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] space-y-3.5">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-[#e1e2da]/60 pb-3">
+                <h4 className="text-xs font-black uppercase tracking-widest text-[#023547]">
+                  Theoretical GMAE Scenario Presets (GMAE Paper Sec. V)
+                </h4>
+                <span className="text-[9px] text-[#536877] font-bold tracking-wider">Quick parameter config</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+                <button
+                  onClick={() => loadScenarioPreset(1)}
+                  className="px-3.5 py-2.5 rounded-xl border border-[#e1e2da] bg-[#f4f4f0]/30 hover:bg-[#023547]/5 text-[10px] text-[#023547] font-bold tracking-wide transition-all text-left flex flex-col justify-between h-18 cursor-pointer"
+                >
+                  <span className="text-[8px] text-[#536877] uppercase block">Scenario 1</span>
+                  <span>High-Transparency</span>
+                </button>
+                <button
+                  onClick={() => loadScenarioPreset(2)}
+                  className="px-3.5 py-2.5 rounded-xl border border-[#e1e2da] bg-[#f4f4f0]/30 hover:bg-[#023547]/5 text-[10px] text-[#023547] font-bold tracking-wide transition-all text-left flex flex-col justify-between h-18 cursor-pointer"
+                >
+                  <span className="text-[8px] text-[#536877] uppercase block">Scenario 2</span>
+                  <span>Leakage & Opacity</span>
+                </button>
+                <button
+                  onClick={() => loadScenarioPreset(3)}
+                  className="px-3.5 py-2.5 rounded-xl border border-[#e1e2da] bg-[#f4f4f0]/30 hover:bg-[#023547]/5 text-[10px] text-[#023547] font-bold tracking-wide transition-all text-left flex flex-col justify-between h-18 cursor-pointer"
+                >
+                  <span className="text-[8px] text-[#536877] uppercase block">Scenario 3</span>
+                  <span>Technocratic Stress</span>
+                </button>
+                <button
+                  onClick={() => loadScenarioPreset(4)}
+                  className="px-3.5 py-2.5 rounded-xl border border-[#e1e2da] bg-[#f4f4f0]/30 hover:bg-[#023547]/5 text-[10px] text-[#023547] font-bold tracking-wide transition-all text-left flex flex-col justify-between h-18 cursor-pointer"
+                >
+                  <span className="text-[8px] text-[#536877] uppercase block">Scenario 4</span>
+                  <span>Sovereign Collapse</span>
+                </button>
+                <button
+                  onClick={() => loadScenarioPreset(5)}
+                  className="px-3.5 py-2.5 rounded-xl border border-[#e1e2da] bg-[#f4f4f0]/30 hover:bg-[#023547]/5 text-[10px] text-[#023547] font-bold tracking-wide transition-all text-left flex flex-col justify-between h-18 cursor-pointer"
+                >
+                  <span className="text-[8px] text-[#536877] uppercase block">Scenario 5</span>
+                  <span>Autonomous AI Peg</span>
+                </button>
+              </div>
+            </div>
             
             {/* CLEAN FLOATING METRIC CARDS */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -586,7 +696,7 @@ export default function CentralBankDashboard() {
 
                     <div className="flex flex-col space-y-1">
                       <div className="flex justify-between text-xs font-mono">
-                        <span className="text-[#536877] text-[10px]">Institutional Leakage (lk)</span>
+                        <span className="text-[#536877] text-[10px]">Leakage (lk)</span>
                         <span className="text-rose-600">{Math.round(leakage * 100)}%</span>
                       </div>
                       <input 
@@ -594,6 +704,19 @@ export default function CentralBankDashboard() {
                         disabled={autopilot}
                         value={leakage} onChange={(e) => setLeakage(Number(e.target.value))}
                         className="w-full accent-rose-600 bg-[#e1e2da] h-1 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="flex flex-col space-y-1">
+                      <div className="flex justify-between text-xs font-mono">
+                        <span className="text-[#536877] text-[10px]">Moral Alignment (α)</span>
+                        <span className="text-[#023547]">{Math.round(moralAlignment * 100)}%</span>
+                      </div>
+                      <input 
+                        type="range" min="0" max="1" step="0.05"
+                        disabled={autopilot}
+                        value={moralAlignment} onChange={(e) => setMoralAlignment(Number(e.target.value))}
+                        className="w-full accent-[#023547] bg-[#e1e2da] h-1 rounded-lg appearance-none cursor-pointer"
                       />
                     </div>
                   </div>
@@ -622,7 +745,7 @@ export default function CentralBankDashboard() {
                 </div>
               </div>
 
-              {/* TELEMETRY CHARTS (lg: col-span-8) */}
+              {/* TELEMETRY CHARTS & JACOBIAN STABILITY (lg: col-span-8) */}
               <div className="lg:col-span-8 flex flex-col space-y-6">
                 
                 {/* Chart 1: Trust & Inflation */}
@@ -677,6 +800,74 @@ export default function CentralBankDashboard() {
                     Dynamic variables are recalculated live using structural model parameters.
                   </p>
                 </div>
+
+                {/* JACOBIAN STABILITY ANALYSIS CARD */}
+                {simData.jacobian && (
+                  <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] space-y-4">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-[#023547] border-b border-[#e1e2da] pb-2">
+                      Formal Stability Analysis: Jacobian Matrix
+                    </h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      
+                      {/* Jacobian Matrix Representation */}
+                      <div className="bg-[#f4f4f0]/50 border border-[#e1e2da] rounded-xl p-4 flex flex-col justify-between space-y-3 font-mono text-xs">
+                        <span className="text-[8px] uppercase tracking-wider text-[#536877] font-black">Jacobian Matrix J</span>
+                        <div className="flex items-center justify-center space-x-2 py-2 text-sm text-[#023547] font-bold">
+                          <span>[</span>
+                          <div className="flex flex-col text-center">
+                            <span>{simData.jacobian.matrix.j11.toFixed(2)} &nbsp; {simData.jacobian.matrix.j12.toFixed(2)}</span>
+                            <span>{simData.jacobian.matrix.j21.toFixed(2)} &nbsp; {simData.jacobian.matrix.j22.toFixed(2)}</span>
+                          </div>
+                          <span>]</span>
+                        </div>
+                        <span className="text-[8px] text-[#536877]">Derived from state variables Trust ($T_t$) & Inflation ($\pi_t$).</span>
+                      </div>
+
+                      {/* Determinant & Trace */}
+                      <div className="bg-[#f4f4f0]/50 border border-[#e1e2da] rounded-xl p-4 flex flex-col justify-between space-y-2 font-mono text-xs">
+                        <span className="text-[8px] uppercase tracking-wider text-[#536877] font-black">Eigenvalues & Traces</span>
+                        <div className="space-y-1.5 py-1 text-[#023547]">
+                          <div className="flex justify-between">
+                            <span>Trace (Tr):</span>
+                            <strong>{simData.jacobian.trace.toFixed(4)}</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Determinant (Det):</span>
+                            <strong>{simData.jacobian.determinant.toFixed(4)}</strong>
+                          </div>
+                          <div className="flex justify-between border-t border-[#e1e2da] pt-1 text-[11px]">
+                            <span>Eigen Magnitude:</span>
+                            <strong>|λ| = {simData.jacobian.eigenvalues[0].magnitude}</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stability Regime Indicators */}
+                      <div className="border border-[#e1e2da] rounded-xl p-4 flex flex-col justify-between space-y-2">
+                        <span className="text-[8px] uppercase tracking-wider text-[#536877] font-mono font-black">Mathematical Regime</span>
+                        <div className="py-2 flex flex-col items-center">
+                          {simData.jacobian.stable ? (
+                            <span className="text-xs font-bold text-[#008082] bg-[#e1f3f3]/60 px-3 py-1.5 rounded-full border border-[#008082]/20 uppercase tracking-wide text-center">
+                              Stable Algorithmic Regime
+                            </span>
+                          ) : (
+                            <span className="text-xs font-bold text-rose-700 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200 uppercase tracking-wide text-center">
+                              Algorithmic Moral Collapse
+                            </span>
+                          )}
+                          <p className="text-[8.5px] text-[#536877] mt-2 text-center font-medium leading-relaxed font-mono">
+                            {simData.jacobian.stable 
+                              ? "Satisfies Trace-Determinant stability: |λ| < 1. Divergence is mitigated." 
+                              : "System diverges: |λ| ≥ 1. Trust collapses or hyperinflation occurs."
+                            }
+                          </p>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
 
                 {/* Chart 2: Money aggregates */}
                 <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] flex flex-col">
