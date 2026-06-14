@@ -29,20 +29,21 @@ export default function LandingPage() {
     <div className="flex flex-col min-h-screen bg-[#fbfbf9] text-[#023547] font-sans antialiased">
       
       {/* HEADER NAVIGATION */}
-      <header className="h-20 border-b border-[#e1e2da] bg-white flex items-center justify-between px-8 md:px-16 z-30">
-        <div className="flex items-center space-x-3.5">
+      <header className="h-20 border-b border-[#e1e2da] bg-white flex items-center justify-between px-4 sm:px-8 md:px-16 z-30">
+        <div className="flex items-center space-x-2 sm:space-x-3.5">
           <div className="h-9 w-9 rounded-lg bg-[#023547] flex items-center justify-center font-bold text-white text-base">
             Ω
           </div>
           <div>
-            <h1 className="text-sm font-black tracking-widest text-[#023547] uppercase leading-none">GMAE</h1>
-            <span className="text-[9px] text-[#536877] font-bold uppercase tracking-widest mt-1 block">General Moral-Algorithmic Equilibrium</span>
+            <h1 className="text-xs sm:text-sm font-black tracking-widest text-[#023547] uppercase leading-none">GMAE</h1>
+            <span className="hidden sm:block text-[9px] text-[#536877] font-bold uppercase tracking-widest mt-1">General Moral-Algorithmic Equilibrium</span>
           </div>
         </div>
 
         <div>
-          <Link href="/engine" className="px-5 py-2.5 bg-[#023547] hover:bg-[#064e65] text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-all shadow-sm">
-            Buka Engine Dashboard
+          <Link href="/engine" className="px-3 py-2 sm:px-5 sm:py-2.5 bg-[#023547] hover:bg-[#064e65] text-white text-[10px] sm:text-xs font-bold uppercase tracking-widest rounded-xl transition-all shadow-sm whitespace-nowrap">
+            <span className="inline sm:hidden">Buka Engine</span>
+            <span className="hidden sm:inline">Buka Engine Dashboard</span>
           </Link>
         </div>
       </header>

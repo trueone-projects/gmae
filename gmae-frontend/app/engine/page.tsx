@@ -349,19 +349,20 @@ export default function CentralBankDashboard() {
     <div className="flex flex-col h-screen bg-[#fbfbf9] text-[#023547] font-sans antialiased overflow-hidden">
       
       {/* HEADER UTAMA: ARVA AI MINIMALIST LOOK */}
-      <header className="h-20 border-b border-[#e1e2da] bg-white flex items-center justify-between px-8 md:px-16 z-30">
-        <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-3.5">
+      <header className="h-20 border-b border-[#e1e2da] bg-white flex items-center justify-between px-4 sm:px-8 md:px-16 z-30">
+        <div className="flex items-center space-x-2 sm:space-x-6">
+          <div className="flex items-center space-x-2 sm:space-x-3.5">
             <div className="h-9 w-9 rounded-lg bg-[#023547] flex items-center justify-center font-bold text-white text-base">
               Ω
             </div>
             <div>
-              <h1 className="text-sm font-black tracking-widest text-[#023547] uppercase leading-none">GMAE</h1>
-              <span className="text-[9px] text-[#536877] font-bold uppercase tracking-widest mt-1 block">Sovereign Ledger</span>
+              <h1 className="text-xs sm:text-sm font-black tracking-widest text-[#023547] uppercase leading-none">GMAE</h1>
+              <span className="text-[9px] text-[#536877] font-bold uppercase tracking-widest mt-1 hidden sm:block">Sovereign Ledger</span>
             </div>
           </div>
-          <Link href="/" className="text-[10px] uppercase font-bold text-[#536877] hover:text-[#023547] border border-[#e1e2da] px-3.5 py-2 rounded-xl bg-[#f4f4f0]/40 transition-colors">
-            ← Kembali ke Beranda
+          <Link href="/" className="text-[9px] sm:text-[10px] uppercase font-bold text-[#536877] hover:text-[#023547] border border-[#e1e2da] px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-[#f4f4f0]/40 transition-colors whitespace-nowrap">
+            <span className="inline sm:hidden">← Beranda</span>
+            <span className="hidden sm:inline">← Kembali ke Beranda</span>
           </Link>
         </div>
 
@@ -388,10 +389,10 @@ export default function CentralBankDashboard() {
         </nav>
 
         {/* DB SYSTEM HEALTH */}
-        <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-2 bg-[#f4f4f0] border border-[#e1e2da] px-3.5 py-1.5 rounded-xl text-[9px] font-mono font-bold">
+        <div className="flex items-center space-x-2 sm:space-x-6">
+          <div className="flex items-center space-x-2 bg-[#f4f4f0] border border-[#e1e2da] px-2 py-1 sm:px-3.5 sm:py-1.5 rounded-xl text-[9px] font-mono font-bold">
             <span className="h-1.5 w-1.5 rounded-full bg-[#008082]"></span>
-            <span className="text-[#023547]">{dbStatus || 'OFFLINE'}</span>
+            <span className="text-[#023547] hidden sm:inline">{dbStatus || 'OFFLINE'}</span>
           </div>
         </div>
       </header>
