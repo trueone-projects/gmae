@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Membuat instance axios dengan basis URL backend Anda
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || '',
 });
 
 // Fungsi untuk mengirim data simulasi ke backend
