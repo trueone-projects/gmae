@@ -1,0 +1,24 @@
+# Dependency directories
+gmae-backend/node_modules/
+gmae-frontend/node_modules/
+
+# Next.js build output
+gmae-frontend/.next/
+
+# Environment files
+gmae-backend/.env
+gmae-frontend/.env
+gmae-frontend/.env.local
+gmae-frontend/.env.development.local
+gmae-frontend/.env.test.local
+gmae-frontend/.env.production.local
+
+# Logs
+gmae-backend/*.log
+gmae-backend/.system_generated/
+gmae-frontend/*.log
+gmae-frontend/.system_generated/
+
+# OS files
+.DS_Store
+Thumbs.db
