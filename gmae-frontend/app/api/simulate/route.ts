@@ -13,7 +13,9 @@ export async function POST(request: Request) {
       leakage = 0.2, 
       moral_alignment = 0.8, 
       shock_severity = 0.1,
-      autopilot = false
+      autopilot = false,
+      oil_price = 75,
+      gold_price = 2300
     } = body;
 
     const inputM1 = parseFloat(m1);
@@ -26,8 +28,12 @@ export async function POST(request: Request) {
     const inputAlpha = autopilot ? 0.95 : parseFloat(moral_alignment);
     const inputEps = parseFloat(shock_severity);
 
-    // Parameter Awal
-    let trust = (0.6 * inputTp) - (0.4 * inputLk) + (0.2 * inputAlpha);
+    const inputOil = parseFloat(oil_price);
+    const inputGold = parseFloat(gold_price);
+
+    // Gold reserves boost institutional trust: baseline gold price is 2300
+    const gold_trust_factor = (inputGold - 2300) * 0.0001;
+    let trust = (0.6 * inputTp) - (0.4 * inputLk) + (0.2 * inputAlpha) + gold_trust_factor;
     trust = Math.max(0.05, Math.min(1.0, trust));
 
     let m1_val = inputM1;
@@ -40,14 +46,17 @@ export async function POST(request: Request) {
 
     // Jalankan simulasi selama 30 periode
     for (let t = 1; t <= 30; t++) {
-      // Menghitung guncangan ekonomi eksternal
+      // Menghitung guncangan ekonomi eksternal dengan pengaruh harga minyak
+      const oil_shock_multiplier = inputOil > 75 ? 1.0 + (inputOil - 75) * 0.015 : 1.0;
       let current_shock = 0;
       if (t >= 10 && t <= 15) {
-        current_shock = inputEps * (1.5 - (t - 10) * 0.25);
+        current_shock = inputEps * (1.5 - (t - 10) * 0.25) * oil_shock_multiplier;
       } else {
-        current_shock = inputEps * 0.15 * (Math.sin(t) + (Math.random() - 0.5));
+        current_shock = inputEps * 0.15 * (Math.sin(t) + (Math.random() - 0.5)) * oil_shock_multiplier;
       }
       current_shock = Math.max(0, current_shock);
+
+      const oil_inflation_push = Math.max(-1.5, (inputOil - 75) * 0.08);
 
       if (autopilot) {
         // MODE AUTOPILOT
@@ -59,7 +68,7 @@ export async function POST(request: Request) {
         m2_val = m1_val + (inputM2 - inputM1) * 0.95;
         m3_val = m2_val + (inputM3 - inputM2) * (0.95 + 0.05 * trust);
 
-        inflation = 2.0 + (0.5 * (1 - trust)) + (0.25 * current_shock) - (0.1 * (interest_rate - 3.5));
+        inflation = 2.0 + (0.5 * (1 - trust)) + (0.25 * current_shock) - (0.1 * (interest_rate - 3.5)) + (oil_inflation_push * 0.2);
         inflation = Math.max(1.8, Math.min(2.2, inflation));
 
         interest_rate = 3.5 + (0.6 * (inflation - 2.0));
@@ -81,11 +90,11 @@ export async function POST(request: Request) {
         if (m2_val <= m1_val) m2_val = m1_val + 100;
         if (m3_val <= m2_val) m3_val = m2_val + 500;
 
-        inflation = 2.0 + (15.0 * Math.pow(1 - trust, 2)) + (8.0 * current_shock) - (0.5 * (interest_rate - 3.5));
-        inflation = Math.max(-2.0, Math.min(50.0, inflation));
+        inflation = 2.0 + (15.0 * Math.pow(1 - trust, 2)) + (8.0 * current_shock) - (0.5 * (interest_rate - 3.5)) + oil_inflation_push;
+        inflation = Math.max(-2.0, Math.min(100.0, inflation));
 
         interest_rate = 3.5 + (1.3 * (inflation - 2.0)) - (2.0 * (1 - trust));
-        interest_rate = Math.max(0.25, Math.min(20.0, interest_rate));
+        interest_rate = Math.max(0.25, Math.min(30.0, interest_rate));
       }
 
       // Siapkan metrik regional
@@ -126,7 +135,18 @@ export async function POST(request: Request) {
     const final_interest = history[history.length - 1].interest_rate;
 
     const simulationDetails = {
-      inputs: { m1, m2, m3, transparency: inputTp, leakage: inputLk, moral_alignment: inputAlpha, shock_severity, autopilot },
+      inputs: { 
+        m1, 
+        m2, 
+        m3, 
+        transparency: inputTp, 
+        leakage: inputLk, 
+        moral_alignment: inputAlpha, 
+        shock_severity, 
+        autopilot,
+        oil_price: inputOil,
+        gold_price: inputGold
+      },
       history,
       summary: { 
         avg_trust, 
@@ -146,7 +166,7 @@ export async function POST(request: Request) {
     } catch (err: any) {
       console.error("Gagal menyimpan data simulasi ke DB:", err.message);
       
-      // Fallback: Tetap kirim hasil simulasi ke frontend agar tidak terjadi error 500
+      // Fallback
       return NextResponse.json({ 
         success: true, 
         data: { 
