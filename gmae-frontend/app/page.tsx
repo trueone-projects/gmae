@@ -120,7 +120,7 @@ const generateDefaultMockData = (): SimulationDetails => {
 
 export default function CentralBankDashboard() {
   // Input States
-  const [runName, setRunName] = useState('Kebijakan Stabilisasi Dinamis');
+  const [runName, setRunName] = useState('Kebijakan Moneter Seimbang');
   const [m1, setM1] = useState(1000);
   const [m2, setM2] = useState(3000);
   const [m3, setM3] = useState(8000);
@@ -128,13 +128,13 @@ export default function CentralBankDashboard() {
   const [leakage, setLeakage] = useState(0.2);
   const [moralAlignment, setMoralAlignment] = useState(0.8);
   const [shockSeverity, setShockSeverity] = useState(0.1);
-  const [autopilot, setAutopilot] = useState(false); // Mode Autopilot GMAE
+  const [autopilot, setAutopilot] = useState(false);
 
   // Commodity Feeds (Oil and Gold prices)
-  const [oilPrice, setOilPrice] = useState(75); // Range: 40 - 180 USD/barrel
-  const [goldPrice, setGoldPrice] = useState(2300); // Range: 1500 - 3500 USD/oz
+  const [oilPrice, setOilPrice] = useState(75);
+  const [goldPrice, setGoldPrice] = useState(2300);
 
-  // Navigation: governor, ledger, reserves
+  // Navigation tabs: governor, ledger, reserves
   const [activeTab, setActiveTab] = useState<'governor' | 'ledger' | 'reserves'>('governor');
 
   // Simulation Results State
@@ -150,11 +150,11 @@ export default function CentralBankDashboard() {
       const data = await getHistoryData();
       if (Array.isArray(data)) {
         setHistoryList(data);
-        setDbStatus('Connected (Neon AWS Cloud)');
+        setDbStatus('CONNECTED');
       }
     } catch (error) {
       console.error('Failed to fetch history:', error);
-      setDbStatus('Local Sandbox Mode');
+      setDbStatus('SANDBOX');
     }
   };
 
@@ -190,7 +190,7 @@ export default function CentralBankDashboard() {
         setActiveTab('governor');
       }
     } catch (error) {
-      alert('Gagal terhubung ke database cloud! Menggunakan simulasi lokal.');
+      alert('Gagal terhubung ke cloud DB! Menggunakan database simulasi lokal.');
       const localSim = generateDefaultMockData();
       setSimData(localSim);
       setActiveTab('governor');
@@ -220,11 +220,11 @@ export default function CentralBankDashboard() {
   const currentHistory = simData.history;
   const latestStep = currentHistory[currentHistory.length - 1];
 
-  // Helper untuk menentukan status stabilitas
+  // Helper stabilitas
   const getStabilityStatus = (trust: number, inflation: number) => {
-    if (trust > 0.6 && inflation < 5.0) return { label: 'High-Trust Stable', color: 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' };
-    if (trust > 0.3 && inflation < 12.0) return { label: 'Moderate Volatility', color: 'text-amber-400 border-amber-500/20 bg-amber-500/5' };
-    return { label: 'Systemic Trust Collapse', color: 'text-rose-405 border-rose-500/20 bg-rose-500/5' };
+    if (trust > 0.6 && inflation < 5.0) return { label: 'Optimal Stability', color: 'text-[#008082] bg-[#e1f3f3]/60 border-[#008082]/20' };
+    if (trust > 0.3 && inflation < 12.0) return { label: 'Moderate Volatility', color: 'text-amber-700 bg-amber-50 border-amber-200' };
+    return { label: 'Sovereign Strain', color: 'text-rose-700 bg-rose-50 border-rose-200' };
   };
 
   const stability = getStabilityStatus(latestStep.trust, latestStep.inflation);
@@ -246,7 +246,7 @@ export default function CentralBankDashboard() {
       .join(' ');
   };
 
-  // SVG Helper untuk Area Chart berlapis (M1, M2, M3)
+  // Area Chart Helper
   const getSvgAreaPath = (data: number[], baseData: number[], minVal: number, maxVal: number) => {
     const range = maxVal - minVal || 1;
     const points = data.map((val, idx) => {
@@ -267,406 +267,378 @@ export default function CentralBankDashboard() {
     return `${pathPart1} ${pathPart2} Z`;
   };
 
-  // Ekstrak data untuk Chart 1 (Trust, Inflation, Interest Rate)
   const trustPoints = currentHistory.map(h => h.trust * 100);
   const inflationPoints = currentHistory.map(h => h.inflation);
   const interestPoints = currentHistory.map(h => h.interest_rate);
 
-  // Ekstrak data untuk Chart 2 (M1, M2, M3)
   const m1Points = currentHistory.map(h => h.m1);
   const m2Points = currentHistory.map(h => h.m2);
   const m3Points = currentHistory.map(h => h.m3);
   const maxMonetaryVal = Math.max(...m3Points) * 1.1;
 
-  // Generate deterministic sealed hash representation for blockchain integration
   const getBlockSealedHash = (id: number, oil: number, gold: number, trust: number) => {
     const payload = `${id}-${oil}-${gold}-${trust}`;
-    return `0x${Buffer.from(payload).toString('hex').slice(0, 16)}...${Buffer.from(payload).toString('hex').slice(-8)}`;
+    return `0x${Buffer.from(payload).toString('hex').slice(0, 16).toUpperCase()}...${Buffer.from(payload).toString('hex').slice(-8).toUpperCase()}`;
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#020503] text-emerald-50 font-sans antialiased overflow-hidden">
+    <div className="flex flex-col h-screen bg-[#fbfbf9] text-[#023547] font-sans antialiased overflow-hidden">
       
-      {/* ORACLE GLOW DECORATIONS */}
-      <div className="absolute top-0 left-1/4 w-[600px] h-[300px] bg-emerald-500/5 rounded-full filter blur-[150px] pointer-events-none -z-10"></div>
-      <div className="absolute bottom-0 right-1/4 w-[500px] h-[300px] bg-teal-500/5 rounded-full filter blur-[120px] pointer-events-none -z-10"></div>
-
-      {/* ULTRA-CLEAN GLASSMORPHIC TOP NAVIGATION */}
-      <header className="h-20 border-b border-emerald-950/60 bg-[#040c06]/50 backdrop-blur-xl flex items-center justify-between px-6 md:px-12 z-30">
-        <div className="flex items-center space-x-3.5">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center font-bold text-[#020503] text-xl tracking-wider shadow-lg shadow-emerald-500/35">
+      {/* HEADER UTAMA: ARVA AI MINIMALIST LOOK */}
+      <header className="h-20 border-b border-[#e1e2da] bg-white flex items-center justify-between px-8 md:px-16 z-30">
+        <div className="flex items-center space-x-4">
+          <div className="h-9 w-9 rounded-lg bg-[#023547] flex items-center justify-center font-bold text-white text-base">
             Ω
           </div>
           <div>
-            <h1 className="text-base font-black tracking-widest text-emerald-300 uppercase leading-none">GMAE Protocol</h1>
-            <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider mt-1 block">Commodity-Backed Ledger</span>
+            <h1 className="text-sm font-black tracking-widest text-[#023547] uppercase leading-none">GMAE</h1>
+            <span className="text-[9px] text-[#536877] font-bold uppercase tracking-widest mt-1 block">Sovereign Ledger</span>
           </div>
         </div>
 
-        {/* HORIZONTAL MENU TABS (Top-level clean) */}
-        <nav className="hidden md:flex bg-[#030904]/80 border border-emerald-950/80 rounded-2xl p-1.5 space-x-1">
+        {/* HORIZONTAL TAB MENU */}
+        <nav className="hidden md:flex bg-[#f4f4f0] border border-[#e1e2da] rounded-xl p-1 space-x-1">
           <button
             onClick={() => setActiveTab('governor')}
-            className={`px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${activeTab === 'governor' ? 'bg-emerald-900/50 text-emerald-300 border border-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.06)]' : 'text-emerald-600 hover:text-emerald-300'}`}
+            className={`px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${activeTab === 'governor' ? 'bg-[#023547] text-white' : 'text-[#536877] hover:text-[#023547]'}`}
           >
-            Monetary Governor
+            Governor
           </button>
           <button
             onClick={() => setActiveTab('ledger')}
-            className={`px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${activeTab === 'ledger' ? 'bg-emerald-900/50 text-emerald-300 border border-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.06)]' : 'text-emerald-600 hover:text-emerald-300'}`}
+            className={`px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${activeTab === 'ledger' ? 'bg-[#023547] text-white' : 'text-[#536877] hover:text-[#023547]'}`}
           >
-            Blockchain Ledger Explorer
+            Ledger Explorer
           </button>
           <button
             onClick={() => setActiveTab('reserves')}
-            className={`px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${activeTab === 'reserves' ? 'bg-emerald-900/50 text-emerald-300 border border-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.06)]' : 'text-emerald-600 hover:text-emerald-300'}`}
+            className={`px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${activeTab === 'reserves' ? 'bg-[#023547] text-white' : 'text-[#536877] hover:text-[#023547]'}`}
           >
-            Sovereign Nodes
+            Nodes
           </button>
         </nav>
 
-        {/* DB HEALTH BADGE & PROFILE */}
+        {/* DB SYSTEM HEALTH */}
         <div className="flex items-center space-x-6">
-          <div className="hidden lg:flex items-center space-x-2 bg-emerald-950/20 border border-emerald-950 px-3.5 py-1.5 rounded-xl text-[10px] font-mono">
-            <span className={`h-2 w-2 rounded-full ${dbStatus?.includes('Connected') ? 'bg-emerald-400 animate-pulse shadow-md shadow-emerald-400' : 'bg-amber-400 shadow-md shadow-amber-400'}`}></span>
-            <span className="text-emerald-400 font-bold">{dbStatus || 'Checking...'}</span>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            <span className="text-xs font-bold text-emerald-400 hidden sm:inline-block">Central Oracle</span>
-            <div className="h-9 w-9 bg-emerald-900/40 border border-emerald-500/20 rounded-xl flex items-center justify-center font-black text-emerald-300 text-xs shadow-inner">
-              CO
-            </div>
+          <div className="flex items-center space-x-2 bg-[#f4f4f0] border border-[#e1e2da] px-3.5 py-1.5 rounded-xl text-[9px] font-mono font-bold">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#008082]"></span>
+            <span className="text-[#023547]">{dbStatus || 'OFFLINE'}</span>
           </div>
         </div>
       </header>
 
-      {/* MOBILE BAR MENU (Hanya muncul di HP / layar kecil) */}
-      <div className="md:hidden flex border-b border-emerald-950 bg-[#040c06]/80 backdrop-blur-md sticky top-0 z-30">
+      {/* MOBILE BAR MENU */}
+      <div className="md:hidden flex border-b border-[#e1e2da] bg-white sticky top-0 z-30">
         <button 
           onClick={() => setActiveTab('governor')}
-          className={`flex-1 py-3.5 text-[10px] font-bold tracking-wider uppercase border-b-2 text-center transition-all ${activeTab === 'governor' ? 'border-emerald-500 text-emerald-300 bg-emerald-950/5' : 'border-transparent text-emerald-600'}`}
+          className={`flex-1 py-3 text-[10px] font-bold tracking-widest uppercase text-center transition-all ${activeTab === 'governor' ? 'text-[#023547] border-b-2 border-[#023547] font-black' : 'text-[#536877]'}`}
         >
           Governor
         </button>
         <button 
           onClick={() => setActiveTab('ledger')}
-          className={`flex-1 py-3.5 text-[10px] font-bold tracking-wider uppercase border-b-2 text-center transition-all ${activeTab === 'ledger' ? 'border-emerald-500 text-emerald-300 bg-emerald-950/5' : 'border-transparent text-emerald-600'}`}
+          className={`flex-1 py-3 text-[10px] font-bold tracking-widest uppercase text-center transition-all ${activeTab === 'ledger' ? 'text-[#023547] border-b-2 border-[#023547] font-black' : 'text-[#536877]'}`}
         >
-          Ledger Explore
+          Ledger
         </button>
         <button 
           onClick={() => setActiveTab('reserves')}
-          className={`flex-1 py-3.5 text-[10px] font-bold tracking-wider uppercase border-b-2 text-center transition-all ${activeTab === 'reserves' ? 'border-emerald-500 text-emerald-300 bg-emerald-950/5' : 'border-transparent text-emerald-600'}`}
+          className={`flex-1 py-3 text-[10px] font-bold tracking-widest uppercase text-center transition-all ${activeTab === 'reserves' ? 'text-[#023547] border-b-2 border-[#023547] font-black' : 'text-[#536877]'}`}
         >
           Nodes
         </button>
       </div>
 
-      {/* LIVE ORACLE REAL-TIME COMMODITY FEED TICKER */}
-      <section className="bg-emerald-950/15 border-b border-emerald-950/50 py-2.5 px-6 md:px-12 flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
-        <div className="flex items-center space-x-6 overflow-x-auto whitespace-nowrap scrollbar-none w-full justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="text-[10px] uppercase font-bold text-emerald-500">Oracle Status:</span>
-            <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 text-[10px] font-bold border border-emerald-900/30">ONLINE</span>
+      {/* ORACLE LIVE COMMODITY FEED BAR */}
+      <section className="bg-[#f4f4f0]/60 border-b border-[#e1e2da] py-2 px-8 md:px-16 flex flex-wrap items-center justify-between gap-4 text-[11px] font-mono font-medium text-[#536877]">
+        <div className="flex items-center space-x-8 overflow-x-auto whitespace-nowrap scrollbar-none w-full justify-between">
+          <div className="flex items-center space-x-1.5">
+            <span className="text-[9px] uppercase font-bold text-[#023547]">Oracle Feed:</span>
+            <span className="px-2 py-0.2 rounded bg-[#023547]/10 text-[#023547] text-[9px] font-extrabold">LIVE</span>
           </div>
 
-          <div className="flex items-center space-x-2 border-r border-emerald-950/60 pr-6">
-            <span className="text-emerald-500">🛢️ Oil (WTI/Brent):</span>
-            <strong className="text-emerald-300">${oilPrice.toFixed(2)}</strong>
-            <span className={`text-[9px] px-1 rounded ${oilPrice > 75 ? 'bg-rose-950/40 text-rose-400 border border-rose-900/30' : 'bg-emerald-950 text-emerald-400'}`}>
-              {oilPrice > 75 ? 'SHOCK INFLATION' : 'OPTIMAL'}
-            </span>
+          <div className="flex items-center space-x-2 border-r border-[#e1e2da] pr-8">
+            <span>🛢️ Oil WTI:</span>
+            <strong className="text-[#023547]">${oilPrice.toFixed(2)} / bbl</strong>
+            {oilPrice > 75 && (
+              <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-250/20">shock</span>
+            )}
           </div>
 
-          <div className="flex items-center space-x-2 border-r border-emerald-950/60 pr-6">
-            <span className="text-emerald-500">🪙 Gold Reserve:</span>
-            <strong className="text-emerald-300">${goldPrice.toFixed(2)}</strong>
-            <span className="text-[9px] px-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-900/30">
-              +{((goldPrice - 2300) * 0.04).toFixed(2)}% Reserve Power
-            </span>
+          <div className="flex items-center space-x-2 border-r border-[#e1e2da] pr-8">
+            <span>🪙 Gold Spot:</span>
+            <strong className="text-[#023547]">${goldPrice.toFixed(2)} / oz</strong>
           </div>
 
           <div className="flex items-center space-x-2">
-            <span className="text-emerald-500">🔒 Ledger Height:</span>
-            <strong className="text-emerald-300">#{102400 + historyList.length}</strong>
+            <span>🔒 Ledger Sync:</span>
+            <strong className="text-[#023547]">Block #{102400 + historyList.length}</strong>
           </div>
         </div>
       </section>
 
-      {/* SCROLLABLE CONTENT FRAME */}
+      {/* SCROLLABLE MAIN CONTENT */}
       <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
 
-        {/* TAB 1: MONETARY GOVERNOR (Simulator + Glowing charts) */}
+        {/* TAB 1: MONETARY GOVERNOR */}
         {activeTab === 'governor' && (
           <div className="space-y-6">
             
-            {/* METRICS FLOATING CARDS GRID */}
+            {/* CLEAN FLOATING METRIC CARDS */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               
               {/* Card 1: GMAE Trust */}
-              <div className="p-5 rounded-2xl bg-[#060e08]/70 border border-emerald-950/70 shadow-[0_4px_20px_rgba(16,185,129,0.02)] flex flex-col justify-between hover:border-emerald-900/40 transition-all">
+              <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] flex flex-col justify-between hover:border-[#023547]/20 transition-all">
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">GMAE Trust Index</span>
-                  <span className="text-[9px] font-mono text-emerald-400 border border-emerald-950 px-1.5 py-0.5 rounded">T_t</span>
+                  <span className="text-[10px] font-bold text-[#536877] uppercase tracking-widest">GMAE Trust</span>
+                  <span className="text-[9px] font-mono text-[#023547]">T_t</span>
                 </div>
                 <div className="my-2.5">
-                  <h3 className="text-3xl font-black font-mono text-emerald-400 leading-none">
+                  <h3 className="text-3xl font-black font-mono text-[#023547] leading-none">
                     {(latestStep.trust * 100).toFixed(1)}%
                   </h3>
-                  <div className={`mt-2.5 text-[9px] px-2.5 py-0.5 rounded-full border inline-block font-extrabold tracking-wider uppercase ${stability.color}`}>
+                  <div className={`mt-3 text-[9px] px-2.5 py-0.5 rounded border inline-block font-bold tracking-wider uppercase ${stability.color}`}>
                     {stability.label}
                   </div>
                 </div>
               </div>
 
-              {/* Card 2: Broad money */}
-              <div className="p-5 rounded-2xl bg-[#060e08]/70 border border-emerald-950/70 shadow-[0_4px_20px_rgba(16,185,129,0.02)] flex flex-col justify-between hover:border-emerald-900/40 transition-all">
+              {/* Card 2: Money Supply M3 */}
+              <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] flex flex-col justify-between hover:border-[#023547]/20 transition-all">
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Money Supply (M3)</span>
-                  <span className="text-[9px] font-mono text-emerald-400 border border-emerald-950 px-1.5 py-0.5 rounded">M3</span>
+                  <span className="text-[10px] font-bold text-[#536877] uppercase tracking-widest">Money Supply (M3)</span>
+                  <span className="text-[9px] font-mono text-[#023547]">M3</span>
                 </div>
                 <div className="my-2.5">
-                  <h3 className="text-3xl font-black font-mono text-emerald-300 leading-none">
-                    {latestStep.m3.toLocaleString()} <span className="text-xs font-medium text-emerald-650">GMA</span>
+                  <h3 className="text-3xl font-black font-mono text-[#023547] leading-none">
+                    {latestStep.m3.toLocaleString()} <span className="text-xs font-semibold text-[#536877]">GMA</span>
                   </h3>
-                  <p className="text-[9px] text-emerald-600 font-mono tracking-wide mt-2">
+                  <p className="text-[9px] text-[#536877] font-mono tracking-wide mt-2">
                     M1: {latestStep.m1.toLocaleString()} | M2: {latestStep.m2.toLocaleString()}
                   </p>
                 </div>
               </div>
 
               {/* Card 3: Inflation */}
-              <div className="p-5 rounded-2xl bg-[#060e08]/70 border border-emerald-950/70 shadow-[0_4px_20px_rgba(16,185,129,0.02)] flex flex-col justify-between hover:border-emerald-900/40 transition-all">
+              <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] flex flex-col justify-between hover:border-[#023547]/20 transition-all">
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Oracle Inflation</span>
-                  <span className="text-[9px] font-mono text-emerald-400 border border-emerald-950 px-1.5 py-0.5 rounded">π_t</span>
+                  <span className="text-[10px] font-bold text-[#536877] uppercase tracking-widest">Inflation Rate</span>
+                  <span className="text-[9px] font-mono text-[#023547]">π_t</span>
                 </div>
                 <div className="my-2.5">
-                  <h3 className={`text-3xl font-black font-mono leading-none ${latestStep.inflation > 15 ? 'text-rose-500' : latestStep.inflation > 5 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  <h3 className={`text-3xl font-black font-mono leading-none ${latestStep.inflation > 15 ? 'text-rose-600' : latestStep.inflation > 5 ? 'text-amber-600' : 'text-[#008082]'}`}>
                     {latestStep.inflation.toFixed(2)}%
                   </h3>
-                  <p className="text-[9px] text-emerald-600 font-mono tracking-wide mt-2">
-                    Policy Anchor: <strong className="text-emerald-400">2.0%</strong>
+                  <p className="text-[9px] text-[#536877] font-mono tracking-wide mt-2">
+                    Anchor Target: <strong className="text-[#023547]">2.0%</strong>
                   </p>
                 </div>
               </div>
 
               {/* Card 4: Policy rate */}
-              <div className="p-5 rounded-2xl bg-[#060e08]/70 border border-emerald-950/70 shadow-[0_4px_20px_rgba(16,185,129,0.02)] flex flex-col justify-between hover:border-emerald-900/40 transition-all">
+              <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] flex flex-col justify-between hover:border-[#023547]/20 transition-all">
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">AI Policy Rate</span>
-                  <span className="text-[9px] font-mono text-emerald-400 border border-emerald-950 px-1.5 py-0.5 rounded">r_t</span>
+                  <span className="text-[10px] font-bold text-[#536877] uppercase tracking-widest">Policy Rate</span>
+                  <span className="text-[9px] font-mono text-[#023547]">r_t</span>
                 </div>
                 <div className="my-2.5">
-                  <h3 className="text-3xl font-black font-mono text-amber-400 leading-none">
+                  <h3 className="text-3xl font-black font-mono text-[#023547] leading-none">
                     {latestStep.interest_rate.toFixed(2)}%
                   </h3>
-                  <p className="text-[9px] text-emerald-600 font-mono tracking-wide mt-2">
-                    Mechanism: <strong className="text-emerald-400">{autopilot ? 'Otonom PID' : 'Static Feedback'}</strong>
+                  <p className="text-[9px] text-[#536877] font-mono tracking-wide mt-2">
+                    Mode: <strong className="text-[#023547]">{autopilot ? 'PID Otonom' : 'Static Feedback'}</strong>
                   </p>
                 </div>
               </div>
+
             </div>
 
-            {/* TWO-COLUMN LAYOUT */}
+            {/* TWO-COLUMN GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               
-              {/* CONTROL BOARD PANEL (lg: col-span-4) */}
+              {/* GOVERNOR CONTROL PANEL (lg: col-span-4) */}
               <div className="lg:col-span-4 flex flex-col space-y-4">
                 
                 {/* Autopilot Status */}
                 {autopilot && (
-                  <div className="p-4 rounded-2xl border border-emerald-950 bg-emerald-950/10 text-xs text-emerald-350 leading-relaxed shadow-inner">
-                    <h4 className="font-extrabold text-emerald-300 uppercase tracking-wider mb-1 flex items-center">
-                      <span className="mr-2 h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-md shadow-emerald-400"></span>
-                      Stabilizer Protocol Active
-                    </h4>
-                    <p className="text-[10px] text-emerald-500">
-                      Standard variables locked by GMAE algorithmic consensus node to maintain system stability.
+                  <div className="p-4 rounded-xl border border-[#e1e2da] bg-[#f4f4f0]/60 text-xs text-[#023547] font-semibold leading-relaxed">
+                    <div className="flex items-center space-x-2 text-[#008082]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#008082]"></span>
+                      <span className="uppercase tracking-wider text-[10px] font-black">Algorithmic Stabilizer Active</span>
+                    </div>
+                    <p className="text-[10px] text-[#536877] mt-1 font-medium">
+                      Consensus protocol has locked simulation parameters for optimal macro equilibrium.
                     </p>
                   </div>
                 )}
 
-                {/* Main Control Panel */}
-                <div className="p-5 rounded-2xl bg-[#060e08]/80 border border-emerald-950/80 flex flex-col space-y-5">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-emerald-300 border-b border-emerald-950 pb-2">
-                    Monetary Governor Inputs
+                {/* Controls Form Card */}
+                <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] flex flex-col space-y-5">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-[#023547] border-b border-[#e1e2da] pb-2">
+                    Policy Directives
                   </h3>
 
-                  {/* Policy Name */}
-                  <div className="flex flex-col space-y-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Simulation Run Name</label>
+                  {/* Run Name */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[9px] font-bold uppercase tracking-wider text-[#536877]">Simulation Identifier</label>
                     <input 
                       type="text"
                       value={runName}
                       onChange={(e) => setRunName(e.target.value)}
-                      className="w-full bg-[#030704] border border-emerald-950 rounded-xl px-4.5 py-3 text-xs focus:outline-none focus:border-emerald-500/50 text-emerald-200 transition-colors font-semibold"
+                      className="w-full bg-[#f4f4f0]/40 border border-[#e1e2da] rounded-xl px-4 py-2.5 text-xs text-[#023547] focus:outline-none focus:border-[#023547]/50 font-semibold"
                     />
                   </div>
 
-                  {/* COMMODITY ORACLE INPUTS (Gold & Oil) */}
-                  <div className="space-y-4 pt-1 border-t border-emerald-950/60">
-                    <h4 className="text-[9px] uppercase font-black text-emerald-400 tracking-wider">Commodity Oracle Prices</h4>
+                  {/* Oracle sliders */}
+                  <div className="space-y-4 pt-1 border-t border-[#e1e2da]/60">
+                    <h4 className="text-[9px] uppercase font-black text-[#023547] tracking-wider">Oracle Price Telemetry</h4>
 
-                    {/* Oil Price Slider */}
+                    {/* Oil */}
                     <div className="flex flex-col space-y-1">
                       <div className="flex justify-between text-xs font-mono">
-                        <span className="text-emerald-500/80 text-[10px]">Crude Oil Price (WTI)</span>
-                        <strong className="text-emerald-300">${oilPrice} / bbl</strong>
+                        <span className="text-[#536877] text-[10px]">World Crude Oil</span>
+                        <strong className="text-[#023547]">${oilPrice} / bbl</strong>
                       </div>
                       <input 
                         type="range" min="40" max="180" step="5"
                         value={oilPrice} onChange={(e) => setOilPrice(Number(e.target.value))}
-                        className="w-full accent-emerald-500 bg-emerald-950/60 h-1.5 rounded-lg appearance-none cursor-pointer"
+                        className="w-full accent-[#023547] bg-[#e1e2da] h-1 rounded-lg appearance-none cursor-pointer"
                       />
-                      <span className="text-[8px] text-emerald-600 font-mono">Higher oil prices increase production cost & push baseline inflation.</span>
                     </div>
 
-                    {/* Gold Price Slider */}
+                    {/* Gold */}
                     <div className="flex flex-col space-y-1">
                       <div className="flex justify-between text-xs font-mono">
-                        <span className="text-emerald-500/80 text-[10px]">Gold Price (Spot)</span>
-                        <strong className="text-emerald-300">${goldPrice} / oz</strong>
+                        <span className="text-[#536877] text-[10px]">Gold Spot Reserve</span>
+                        <strong className="text-[#023547]">${goldPrice} / oz</strong>
                       </div>
                       <input 
                         type="range" min="1500" max="3500" step="50"
                         value={goldPrice} onChange={(e) => setGoldPrice(Number(e.target.value))}
-                        className="w-full accent-emerald-500 bg-emerald-950/60 h-1.5 rounded-lg appearance-none cursor-pointer"
+                        className="w-full accent-[#023547] bg-[#e1e2da] h-1 rounded-lg appearance-none cursor-pointer"
                       />
-                      <span className="text-[8px] text-emerald-600 font-mono">Higher gold prices strengthen GMAE's physical reserves, boosting trust.</span>
                     </div>
                   </div>
 
-                  {/* MONETARY TARGETS */}
-                  <div className={`space-y-4 pt-3 border-t border-emerald-950/60 transition-all duration-300 ${autopilot ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-                    <h4 className="text-[9px] uppercase font-black text-emerald-400 tracking-wider">Monetary Targets</h4>
+                  {/* Sliders targets */}
+                  <div className={`space-y-4 pt-3 border-t border-[#e1e2da]/60 transition-all duration-300 ${autopilot ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                    <h4 className="text-[9px] uppercase font-black text-[#023547] tracking-wider">Monetary Aggregates</h4>
 
                     {/* M1 */}
                     <div className="flex flex-col space-y-1">
                       <div className="flex justify-between text-xs font-mono">
-                        <span className="text-emerald-500/80 text-[10px]">Target M1 (Cash)</span>
-                        <span className="text-emerald-300">{m1.toLocaleString()} GMA</span>
+                        <span className="text-[#536877] text-[10px]">Liquid Cash (M1)</span>
+                        <span className="text-[#023547]">{m1.toLocaleString()} GMA</span>
                       </div>
                       <input 
                         type="range" min="500" max="3000" step="100"
                         disabled={autopilot}
                         value={m1} onChange={(e) => setM1(Number(e.target.value))}
-                        className="w-full accent-emerald-500 bg-emerald-950/60 h-1.5 rounded-lg appearance-none cursor-pointer"
+                        className="w-full accent-[#023547] bg-[#e1e2da] h-1 rounded-lg appearance-none cursor-pointer"
                       />
                     </div>
 
                     {/* M2 */}
                     <div className="flex flex-col space-y-1">
                       <div className="flex justify-between text-xs font-mono">
-                        <span className="text-emerald-500/80 text-[10px]">Target M2 (Savings)</span>
-                        <span className="text-emerald-300">{m2.toLocaleString()} GMA</span>
+                        <span className="text-[#536877] text-[10px]">Savings Supply (M2)</span>
+                        <span className="text-[#023547]">{m2.toLocaleString()} GMA</span>
                       </div>
                       <input 
                         type="range" min="1500" max="8000" step="100"
                         disabled={autopilot}
                         value={m2} onChange={(e) => setM2(Number(e.target.value))}
-                        className="w-full accent-emerald-500 bg-emerald-950/60 h-1.5 rounded-lg appearance-none cursor-pointer"
+                        className="w-full accent-[#023547] bg-[#e1e2da] h-1 rounded-lg appearance-none cursor-pointer"
                       />
                     </div>
 
                     {/* M3 */}
                     <div className="flex flex-col space-y-1">
                       <div className="flex justify-between text-xs font-mono">
-                        <span className="text-emerald-500/80 text-[10px]">Target M3 (Broad Supply)</span>
-                        <span className="text-emerald-300">{m3.toLocaleString()} GMA</span>
+                        <span className="text-[#536877] text-[10px]">Broad Money (M3)</span>
+                        <span className="text-[#023547]">{m3.toLocaleString()} GMA</span>
                       </div>
                       <input 
                         type="range" min="4000" max="20000" step="200"
                         disabled={autopilot}
                         value={m3} onChange={(e) => setM3(Number(e.target.value))}
-                        className="w-full accent-emerald-500 bg-emerald-950/60 h-1.5 rounded-lg appearance-none cursor-pointer"
+                        className="w-full accent-[#023547] bg-[#e1e2da] h-1 rounded-lg appearance-none cursor-pointer"
                       />
                     </div>
                   </div>
 
-                  {/* ALGORITHMIC VARIABLES */}
-                  <div className={`space-y-4 pt-3 border-t border-emerald-950/60 transition-all duration-300 ${autopilot ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-                    <h4 className="text-[9px] uppercase font-black text-emerald-400 tracking-wider">Consensus Variables</h4>
+                  {/* Variables */}
+                  <div className={`space-y-4 pt-3 border-t border-[#e1e2da]/60 transition-all duration-300 ${autopilot ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                    <h4 className="text-[9px] uppercase font-black text-[#023547] tracking-wider">Consensus Ratios</h4>
 
                     <div className="flex flex-col space-y-1">
                       <div className="flex justify-between text-xs font-mono">
-                        <span className="text-emerald-500/80 text-[10px]">Transparency (tp)</span>
-                        <span className="text-emerald-400">{Math.round(transparency * 100)}%</span>
+                        <span className="text-[#536877] text-[10px]">Transparency (tp)</span>
+                        <span className="text-[#023547]">{Math.round(transparency * 100)}%</span>
                       </div>
                       <input 
                         type="range" min="0" max="1" step="0.05"
                         disabled={autopilot}
                         value={transparency} onChange={(e) => setTransparency(Number(e.target.value))}
-                        className="w-full accent-emerald-500 bg-emerald-950/60 h-1.5 rounded-lg appearance-none cursor-pointer"
+                        className="w-full accent-[#023547] bg-[#e1e2da] h-1 rounded-lg appearance-none cursor-pointer"
                       />
                     </div>
 
                     <div className="flex flex-col space-y-1">
                       <div className="flex justify-between text-xs font-mono">
-                        <span className="text-emerald-500/80 text-[10px]">Leakage (lk)</span>
-                        <span className="text-rose-400">{Math.round(leakage * 100)}%</span>
+                        <span className="text-[#536877] text-[10px]">Institutional Leakage (lk)</span>
+                        <span className="text-rose-600">{Math.round(leakage * 100)}%</span>
                       </div>
                       <input 
                         type="range" min="0" max="1" step="0.05"
                         disabled={autopilot}
                         value={leakage} onChange={(e) => setLeakage(Number(e.target.value))}
-                        className="w-full accent-rose-500 bg-emerald-950/60 h-1.5 rounded-lg appearance-none cursor-pointer"
+                        className="w-full accent-rose-600 bg-[#e1e2da] h-1 rounded-lg appearance-none cursor-pointer"
                       />
                     </div>
                   </div>
 
-                  {/* AUTOPILOT PROTOCOL & SIMULATE BUTTON */}
-                  <div className="pt-3 border-t border-emerald-950/60 space-y-3">
+                  {/* Buttons */}
+                  <div className="pt-3 border-t border-[#e1e2da]/60 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-emerald-500 uppercase">Engagement Protocol</span>
+                      <span className="text-[9px] font-bold text-[#536877] uppercase">AI governor status</span>
                       <button
                         onClick={() => setAutopilot(!autopilot)}
-                        className={`text-[9px] font-extrabold px-3 py-1 rounded-xl transition-all cursor-pointer ${autopilot ? 'bg-emerald-500 text-emerald-950 shadow-md shadow-emerald-500/20' : 'bg-emerald-950 text-emerald-400 border border-emerald-900/35'}`}
+                        className={`text-[9px] font-black px-3.5 py-1 rounded-xl transition-all cursor-pointer ${autopilot ? 'bg-[#008082] text-white' : 'bg-[#f4f4f0] text-[#023547] border border-[#e1e2da]'}`}
                       >
-                        {autopilot ? 'AUTOPILOT: ENGAGED' : 'MANUAL CONTROL'}
+                        {autopilot ? 'AUTOPILOT ENGAGED' : 'MANUAL'}
                       </button>
                     </div>
 
                     <button
                       onClick={handleSimulate}
                       disabled={loading}
-                      className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-emerald-950 font-black py-4 px-4 rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      className="w-full bg-[#023547] hover:bg-[#064e65] text-white font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
-                      {loading ? 'COMMITTING LEDGER CHECKPOINT...' : 'COMMIT STATE TO LEDGER'}
+                      {loading ? 'RUNNING EQUILIBRIUM SIM...' : 'COMMIT STATE TO LEDGER'}
                     </button>
                   </div>
 
                 </div>
               </div>
 
-              {/* TELEMETRY CHARTS PANEL (lg: col-span-8) */}
+              {/* TELEMETRY CHARTS (lg: col-span-8) */}
               <div className="lg:col-span-8 flex flex-col space-y-6">
                 
                 {/* Chart 1: Trust & Inflation */}
-                <div className="p-5 rounded-2xl bg-[#060e08]/80 border border-emerald-950/80 flex flex-col">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-emerald-300 border-b border-emerald-950 pb-2 flex justify-between">
-                    <span>Sovereign Trust & Price Stabilization curves</span>
-                    <span className="text-emerald-600 font-mono text-[9px] lowercase">Dynamic general equilibrium</span>
+                <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] flex flex-col">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-[#023547] border-b border-[#e1e2da] pb-2 flex justify-between">
+                    <span>Sovereign Trust & Inflation telemetry</span>
+                    <span className="text-[#536877] font-mono text-[9px] lowercase">Dynamic general equilibrium</span>
                   </h3>
 
-                  <div className="relative mt-4 flex justify-center bg-[#030604] border border-emerald-950/65 rounded-xl p-2 overflow-hidden shadow-inner">
+                  <div className="relative mt-4 flex justify-center bg-white border border-[#e1e2da] rounded-xl p-2 shadow-inner">
                     <svg width={chartW} height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} className="w-full h-auto">
-                      <defs>
-                        <filter id="emerald-glow" x="-20%" y="-20%" width="140%" height="140%">
-                          <feGaussianBlur stdDeviation="3.5" result="blur" />
-                          <feMerge>
-                            <feMergeNode in="blur" />
-                            <feMergeNode in="SourceGraphic" />
-                          </feMerge>
-                        </filter>
-                      </defs>
-
                       {/* Grid Lines */}
                       {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
                         const y = padding + ratio * (chartH - 2 * padding);
                         return (
-                          <line key={idx} x1={padding} y1={y} x2={chartW - padding} y2={y} stroke="#051207" strokeDasharray="3 3" />
+                          <line key={idx} x1={padding} y1={y} x2={chartW - padding} y2={y} stroke="#f1f2ec" strokeWidth="1" />
                         );
                       })}
 
@@ -676,74 +648,59 @@ export default function CentralBankDashboard() {
                         y={padding} 
                         width={(6 / 29) * (chartW - 2 * padding)} 
                         height={chartH - 2 * padding} 
-                        fill="rgba(239, 68, 68, 0.02)" 
-                        stroke="rgba(239, 68, 68, 0.10)"
+                        fill="rgba(200, 62, 59, 0.02)" 
+                        stroke="rgba(200, 62, 59, 0.1)"
                         strokeDasharray="2 2"
                       />
 
                       {/* Curves */}
                       <path
                         d={getSvgPath(trustPoints, 0, 100)}
-                        fill="none" stroke="#10b981" strokeWidth="3.5" filter="url(#emerald-glow)" strokeLinecap="round" strokeLinejoin="round"
+                        fill="none" stroke="#023547" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                       />
                       <path
                         d={getSvgPath(inflationPoints, -2, 50)}
-                        fill="none" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="3 1" strokeLinecap="round" strokeLinejoin="round"
+                        fill="none" stroke="#c83e3b" strokeWidth="1.5" strokeDasharray="4 2" strokeLinecap="round" strokeLinejoin="round"
                       />
                       <path
                         d={getSvgPath(interestPoints, 0, 20)}
-                        fill="none" stroke="#f59e0b" strokeWidth="2.0" strokeLinecap="round" strokeLinejoin="round"
+                        fill="none" stroke="#b58b10" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
                       />
 
                       {/* Legend */}
-                      <text x={padding + 10} y={padding + 15} fill="#10b981" fontSize="9" fontFamily="monospace" fontWeight="bold">—— GMAE Trust (%)</text>
-                      <text x={padding + 140} y={padding + 15} fill="#ef4444" fontSize="9" fontFamily="monospace" fontWeight="bold">- - Inflation (π)</text>
-                      <text x={padding + 260} y={padding + 15} fill="#f59e0b" fontSize="9" fontFamily="monospace" fontWeight="bold">—— Policy Rate (r)</text>
+                      <text x={padding + 10} y={padding + 15} fill="#023547" fontSize="9" fontFamily="monospace" fontWeight="bold">—— GMAE Trust (%)</text>
+                      <text x={padding + 140} y={padding + 15} fill="#c83e3b" fontSize="9" fontFamily="monospace" fontWeight="bold">- - Inflation (π)</text>
+                      <text x={padding + 260} y={padding + 15} fill="#b58b10" fontSize="9" fontFamily="monospace" fontWeight="bold">—— Policy Rate (r)</text>
                     </svg>
                   </div>
-                  <p className="text-[10px] text-emerald-500/80 mt-3 text-center leading-relaxed font-semibold">
-                    The stabilization curves react endogenously to your Oracle Gold prices and Oil shocks.
+                  <p className="text-[10px] text-[#536877] mt-3 text-center leading-relaxed font-semibold">
+                    Dynamic variables are recalculated live using structural model parameters.
                   </p>
                 </div>
 
                 {/* Chart 2: Money aggregates */}
-                <div className="p-5 rounded-2xl bg-[#060e08]/80 border border-emerald-950/80 flex flex-col">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-emerald-300 border-b border-emerald-950 pb-2 flex justify-between">
-                    <span>Monetary Aggregate Supply allocation (M1, M2, M3)</span>
-                    <span className="text-emerald-600 font-mono text-[9px] lowercase">M3 Broad liquidity distribution</span>
+                <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] flex flex-col">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-[#023547] border-b border-[#e1e2da] pb-2 flex justify-between">
+                    <span>Monetary Aggregate Supply curves</span>
+                    <span className="text-[#536877] font-mono text-[9px] lowercase">M3 supply split</span>
                   </h3>
 
-                  <div className="relative mt-4 flex justify-center bg-[#030604] border border-emerald-950/65 rounded-xl p-2 overflow-hidden shadow-inner">
+                  <div className="relative mt-4 flex justify-center bg-white border border-[#e1e2da] rounded-xl p-2 shadow-inner">
                     <svg width={chartW} height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} className="w-full h-auto">
-                      <defs>
-                        <linearGradient id="glowM3" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.12}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="glowM2" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#0d9488" stopOpacity={0.20}/>
-                          <stop offset="95%" stopColor="#0d9488" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="glowM1" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.28}/>
-                          <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-
                       {/* Areas */}
-                      <path d={getSvgAreaPath(m3Points, m2Points, 0, maxMonetaryVal)} fill="url(#glowM3)" stroke="none" />
-                      <path d={getSvgAreaPath(m2Points, m1Points, 0, maxMonetaryVal)} fill="url(#glowM2)" stroke="none" />
-                      <path d={getSvgAreaPath(m1Points, currentHistory.map(() => 0), 0, maxMonetaryVal)} fill="url(#glowM1)" stroke="none" />
+                      <path d={getSvgAreaPath(m3Points, m2Points, 0, maxMonetaryVal)} fill="rgba(2, 53, 71, 0.03)" stroke="none" />
+                      <path d={getSvgAreaPath(m2Points, m1Points, 0, maxMonetaryVal)} fill="rgba(0, 128, 130, 0.05)" stroke="none" />
+                      <path d={getSvgAreaPath(m1Points, currentHistory.map(() => 0), 0, maxMonetaryVal)} fill="rgba(6, 182, 212, 0.04)" stroke="none" />
 
                       {/* Lines */}
-                      <path d={getSvgPath(m3Points, 0, maxMonetaryVal)} fill="none" stroke="#10b981" strokeWidth="1.5" />
-                      <path d={getSvgPath(m2Points, 0, maxMonetaryVal)} fill="none" stroke="#0d9488" strokeWidth="1.5" />
+                      <path d={getSvgPath(m3Points, 0, maxMonetaryVal)} fill="none" stroke="#023547" strokeWidth="1.5" />
+                      <path d={getSvgPath(m2Points, 0, maxMonetaryVal)} fill="none" stroke="#008082" strokeWidth="1.5" />
                       <path d={getSvgPath(m1Points, 0, maxMonetaryVal)} fill="none" stroke="#06b6d4" strokeWidth="2.5" />
 
                       {/* Legend */}
-                      <text x={padding + 10} y={padding + 15} fill="#10b981" fontSize="9" fontFamily="monospace" fontWeight="bold">■ M3 (Broad Money)</text>
-                      <text x={padding + 140} y={padding + 15} fill="#0d9488" fontSize="9" fontFamily="monospace" fontWeight="bold">■ M2 (Savings)</text>
-                      <text x={padding + 260} y={padding + 15} fill="#06b6d4" fontSize="9" fontFamily="monospace" fontWeight="bold">■ M1 (Cash liquidity)</text>
+                      <text x={padding + 10} y={padding + 15} fill="#023547" fontSize="9" fontFamily="monospace" fontWeight="bold">■ M3 (Broad Money)</text>
+                      <text x={padding + 140} y={padding + 15} fill="#008082" fontSize="9" fontFamily="monospace" fontWeight="bold">■ M2 (Savings)</text>
+                      <text x={padding + 260} y={padding + 15} fill="#06b6d4" fontSize="9" fontFamily="monospace" fontWeight="bold">■ M1 (Liquid Cash)</text>
                     </svg>
                   </div>
                 </div>
@@ -759,37 +716,37 @@ export default function CentralBankDashboard() {
         {activeTab === 'ledger' && (
           <div className="space-y-6">
             
-            {/* LEDGER INTRO CARD */}
-            <div className="p-6 rounded-2xl bg-[#060e08]/80 border border-emerald-950/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            {/* LEDGER BANNER */}
+            <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
-                <h3 className="text-base font-bold text-emerald-300">Commodity-Backed Blockchain Explorer</h3>
-                <p className="text-xs text-emerald-600 font-semibold mt-1">
-                  Sealed transactions cryptographically anchoring Crude Oil, Spot Gold, and macroeconomic indexes into the atomic postgres state ledger.
+                <h3 className="text-base font-black text-[#023547]">Sovereign Blockchain Ledger Explorer</h3>
+                <p className="text-xs text-[#536877] font-semibold mt-1">
+                  Each committed simulation state is cryptographically signed and stored in the PostgreSQL database ledger.
                 </p>
               </div>
 
-              <div className="flex space-x-6 font-mono text-xs bg-[#020503] border border-emerald-950 p-4 rounded-2xl">
+              <div className="flex space-x-6 font-mono text-xs bg-[#f4f4f0] border border-[#e1e2da] p-4 rounded-xl">
                 <div>
-                  <span className="text-emerald-600 block text-[8px] uppercase">Sealed Blocks</span>
-                  <strong className="text-emerald-400">#{102400 + historyList.length}</strong>
+                  <span className="text-[#536877] block text-[8px] uppercase font-bold">Ledger Height</span>
+                  <strong className="text-[#023547]">#{102400 + historyList.length}</strong>
                 </div>
                 <div>
-                  <span className="text-emerald-600 block text-[8px] uppercase">State Sync</span>
-                  <strong className="text-emerald-400">ACTIVE</strong>
+                  <span className="text-[#536877] block text-[8px] uppercase font-bold">Consensus</span>
+                  <strong className="text-[#023547]">POT (TRUST)</strong>
                 </div>
               </div>
             </div>
 
             {/* BLOCK DATA LIST */}
-            <div className="rounded-2xl bg-[#060e08]/80 border border-emerald-950/80 overflow-hidden">
-              <div className="p-4 border-b border-emerald-950 bg-[#040c06]/40">
-                <h4 className="text-xs font-black uppercase tracking-widest text-emerald-300">Recent Sealed State Ledger Blocks</h4>
+            <div className="rounded-2xl bg-white border border-[#e1e2da] overflow-hidden">
+              <div className="p-4 border-b border-[#e1e2da] bg-[#f4f4f0]/40">
+                <h4 className="text-xs font-black uppercase tracking-widest text-[#023547]">Committed Blocks</h4>
               </div>
 
-              <div className="divide-y divide-emerald-950/80">
+              <div className="divide-y divide-[#e1e2da]">
                 {historyList.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-emerald-600">
-                    No blocks verified yet. Commit a simulator policy to mine the first block.
+                  <div className="p-8 text-center text-xs text-[#536877]">
+                    No database blocks synchronized yet. Run simulation to commit.
                   </div>
                 ) : (
                   historyList.map((run, idx) => {
@@ -800,58 +757,58 @@ export default function CentralBankDashboard() {
                     const sealedHash = getBlockSealedHash(run.id, oilVal, goldVal, run.trust_level);
 
                     return (
-                      <div key={run.id} className="p-4.5 hover:bg-[#07130b]/20 transition-all">
+                      <div key={run.id} className="p-5 hover:bg-[#f4f4f0]/20 transition-all">
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                           
-                          {/* Block Icon, Height, and Hash */}
+                          {/* Block Identity */}
                           <div className="flex items-center space-x-4">
-                            <div className="h-10 w-10 bg-[#020503] border border-emerald-500/20 rounded-xl flex flex-col items-center justify-center font-mono">
-                              <span className="text-[7px] text-emerald-600 leading-none">BLOCK</span>
-                              <span className="text-xs font-black text-emerald-400">#{blockHeight}</span>
+                            <div className="h-10 w-10 bg-[#f4f4f0] border border-[#e1e2da] rounded-xl flex flex-col items-center justify-center font-mono">
+                              <span className="text-[7px] text-[#536877] leading-none">BLOCK</span>
+                              <span className="text-xs font-black text-[#023547]">#{blockHeight}</span>
                             </div>
                             <div>
                               <div className="flex items-center space-x-2">
-                                <h5 className="text-xs font-bold text-emerald-200">{run.run_name}</h5>
+                                <h5 className="text-xs font-bold text-[#023547]">{run.run_name}</h5>
                                 {run.details.inputs.autopilot && (
-                                  <span className="text-[8px] uppercase px-1.5 py-0.2 bg-emerald-950 text-emerald-400 border border-emerald-900/30 font-bold rounded">AI GOV</span>
+                                  <span className="text-[7px] uppercase px-1.5 py-0.2 bg-[#008082]/10 text-[#008082] border border-[#008082]/20 font-black rounded">AI GOV</span>
                                 )}
                               </div>
-                              <span className="text-[9px] text-emerald-600 font-mono tracking-wider break-all">{sealedHash}</span>
+                              <span className="text-[9px] text-[#536877] font-mono tracking-wider break-all">{sealedHash}</span>
                             </div>
                           </div>
 
-                          {/* Oracle Sealed Values */}
+                          {/* Oracle values sealed */}
                           <div className="flex flex-wrap lg:flex-nowrap items-center justify-between lg:justify-end gap-6 text-xs font-mono">
-                            <div className="bg-[#020503] border border-emerald-955/30 px-3 py-1.5 rounded-xl">
-                              <span className="text-emerald-600 block text-[8px] uppercase">Sealed Oil</span>
-                              <strong className="text-emerald-300">${oilVal}</strong>
+                            <div className="bg-[#f4f4f0] border border-[#e1e2da] px-3 py-1.5 rounded-lg">
+                              <span className="text-[#536877] block text-[7px] uppercase font-bold">Oil WTI</span>
+                              <strong className="text-[#023547]">${oilVal}</strong>
                             </div>
                             
-                            <div className="bg-[#020503] border border-emerald-955/30 px-3 py-1.5 rounded-xl">
-                              <span className="text-emerald-600 block text-[8px] uppercase">Sealed Gold</span>
-                              <strong className="text-emerald-300">${goldVal}</strong>
+                            <div className="bg-[#f4f4f0] border border-[#e1e2da] px-3 py-1.5 rounded-lg">
+                              <span className="text-[#536877] block text-[7px] uppercase font-bold">Gold Spot</span>
+                              <strong className="text-[#023547]">${goldVal}</strong>
                             </div>
 
                             <div>
-                              <span className="text-emerald-600 block text-[8px] uppercase text-right md:text-left">Settled Trust</span>
-                              <strong className="text-emerald-450">{(run.trust_level * 100).toFixed(2)}%</strong>
+                              <span className="text-[#536877] block text-[7px] uppercase font-bold">Avg Trust</span>
+                              <strong className="text-[#023547]">{(run.trust_level * 100).toFixed(2)}%</strong>
                             </div>
 
                             <div className="text-right">
-                              <span className="text-emerald-650 block text-[8px] uppercase">Timestamp</span>
-                              <span className="text-emerald-500/80">{new Date(run.created_at).toLocaleTimeString('id-ID')}</span>
+                              <span className="text-[#536877] block text-[7px] uppercase font-bold">Sync Time</span>
+                              <span className="text-[#023547]/80">{new Date(run.created_at).toLocaleTimeString('id-ID')}</span>
                             </div>
 
                             <div className="flex items-center space-x-2">
                               <button
                                 onClick={() => handleLoadHistory(run)}
-                                className="px-3 py-1.5 rounded bg-emerald-950 border border-emerald-500/20 hover:bg-emerald-900/40 text-emerald-400 font-bold uppercase text-[9px] transition-all cursor-pointer"
+                                className="px-3 py-1.5 rounded-lg bg-[#f4f4f0] border border-[#e1e2da] hover:bg-[#023547] hover:text-white text-[#023547] font-bold uppercase text-[9px] transition-all cursor-pointer"
                               >
-                                Load state
+                                Load
                               </button>
                               <button
                                 onClick={() => setExpandedBlock(isExpanded ? null : run.id)}
-                                className="p-1 rounded bg-[#020503] text-emerald-500 hover:text-emerald-400 cursor-pointer"
+                                className="p-1 rounded bg-[#f4f4f0] border border-[#e1e2da] text-[#023547] hover:bg-[#023547] hover:text-white transition-colors cursor-pointer"
                               >
                                 <svg className={`w-4 h-4 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -862,14 +819,14 @@ export default function CentralBankDashboard() {
 
                         </div>
 
-                        {/* Expandable JSON detail */}
+                        {/* JSON details */}
                         {isExpanded && (
-                          <div className="mt-4 p-4 rounded-xl bg-[#020503] border border-emerald-950 font-mono text-[9px] text-emerald-400/90 space-y-2">
-                            <div className="flex justify-between border-b border-emerald-950/60 pb-1 text-emerald-600">
-                              <span>Consensus Status: SECURELY_COMMITTED</span>
-                              <span>Block Weight: 21,492 Gas</span>
+                          <div className="mt-4 p-4 rounded-xl bg-[#f4f4f0]/60 border border-[#e1e2da] font-mono text-[10px] text-[#023547] space-y-2">
+                            <div className="flex justify-between border-b border-[#e1e2da] pb-1 text-[#536877]">
+                              <span>Sync State: COMMITTED_ATOMIC</span>
+                              <span>Metadata Size: 2.1kb</span>
                             </div>
-                            <div className="overflow-x-auto whitespace-pre max-h-64 scrollbar-none">
+                            <div className="overflow-x-auto whitespace-pre max-h-64 scrollbar-none text-[9px]">
                               {JSON.stringify(run.details, null, 2)}
                             </div>
                           </div>
@@ -884,131 +841,131 @@ export default function CentralBankDashboard() {
           </div>
         )}
 
-        {/* TAB 3: SOVEREIGN NODES STATUS */}
+        {/* TAB 3: SOVEREIGN NODES */}
         {activeTab === 'reserves' && (
           <div className="space-y-6">
             
-            <div className="p-5 rounded-2xl bg-[#060e08]/80 border border-emerald-950/80">
-              <h3 className="text-sm font-black uppercase tracking-widest text-emerald-300 mb-2">Central Bank API Network Bridge Telemetry</h3>
-              <p className="text-xs text-emerald-600 font-semibold leading-relaxed">
-                Autonomous ledger nodes dynamically syncing liquidity targets, foreign reserves, and domestic interest rates into the GMAE algorithmic stabilization matrix.
+            <div className="p-6 rounded-2xl bg-white border border-[#e1e2da]">
+              <h3 className="text-sm font-black uppercase tracking-widest text-[#023547] mb-2">Central Bank API Node Telemetry</h3>
+              <p className="text-xs text-[#536877] font-semibold leading-relaxed">
+                Decentralized nodes syncing GMAE reserves, interest guidelines, and exchange peg ratios in real-time.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              {/* FED Node */}
-              <div className="p-5 rounded-2xl bg-[#060e08]/80 border border-emerald-950/80 flex flex-col justify-between space-y-4">
+              {/* FED */}
+              <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] flex flex-col justify-between space-y-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="text-xs font-bold text-emerald-200">FED Node Bridge (USD)</h4>
-                    <p className="text-[9px] text-emerald-600 font-mono">fed.node.gmae.net</p>
+                    <h4 className="text-xs font-bold text-[#023547]">FED Node (USD)</h4>
+                    <p className="text-[9px] text-[#536877] font-mono">fed.node.gmae.net</p>
                   </div>
-                  <span className="flex items-center space-x-1.5 text-[9px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/25 font-bold">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>CONNECTED // 12ms</span>
+                  <span className="flex items-center space-x-1.5 text-[9px] font-mono px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                    <span>ONLINE // 12ms</span>
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-2 text-xs font-mono text-center bg-[#020503] border border-emerald-955/40 p-2.5 rounded-xl">
+                <div className="grid grid-cols-3 gap-2 text-xs font-mono text-center bg-[#f4f4f0]/60 border border-[#e1e2da] p-3 rounded-xl">
                   <div>
-                    <span className="text-[8px] text-emerald-650 block">Interest Rate</span>
-                    <strong className="text-emerald-300">5.25%</strong>
+                    <span className="text-[8px] text-[#536877] block font-bold">Interest</span>
+                    <strong className="text-[#023547]">5.25%</strong>
                   </div>
                   <div>
-                    <span className="text-[8px] text-emerald-650 block">Peg Ratio</span>
-                    <strong className="text-emerald-300">1.00 USD</strong>
+                    <span className="text-[8px] text-[#536877] block font-bold">Peg Ratio</span>
+                    <strong className="text-[#023547]">1.00 USD</strong>
                   </div>
                   <div>
-                    <span className="text-[8px] text-emerald-650 block">M3 Supply</span>
-                    <strong className="text-emerald-400">$21.0T</strong>
+                    <span className="text-[8px] text-[#536877] block font-bold">M3 Supply</span>
+                    <strong className="text-[#023547]">$21.0T</strong>
                   </div>
                 </div>
               </div>
 
-              {/* ECB Node */}
-              <div className="p-5 rounded-2xl bg-[#060e08]/80 border border-emerald-950/80 flex flex-col justify-between space-y-4">
+              {/* ECB */}
+              <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] flex flex-col justify-between space-y-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="text-xs font-bold text-emerald-200">ECB Node Bridge (EUR)</h4>
-                    <p className="text-[9px] text-emerald-600 font-mono">ecb.node.gmae.net</p>
+                    <h4 className="text-xs font-bold text-[#023547]">ECB Node (EUR)</h4>
+                    <p className="text-[9px] text-[#536877] font-mono">ecb.node.gmae.net</p>
                   </div>
-                  <span className="flex items-center space-x-1.5 text-[9px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/25 font-bold">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>CONNECTED // 34ms</span>
+                  <span className="flex items-center space-x-1.5 text-[9px] font-mono px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                    <span>ONLINE // 34ms</span>
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-2 text-xs font-mono text-center bg-[#020503] border border-emerald-955/40 p-2.5 rounded-xl">
+                <div className="grid grid-cols-3 gap-2 text-xs font-mono text-center bg-[#f4f4f0]/60 border border-[#e1e2da] p-3 rounded-xl">
                   <div>
-                    <span className="text-[8px] text-emerald-650 block">Interest Rate</span>
-                    <strong className="text-emerald-300">4.00%</strong>
+                    <span className="text-[8px] text-[#536877] block font-bold">Interest</span>
+                    <strong className="text-[#023547]">4.00%</strong>
                   </div>
                   <div>
-                    <span className="text-[8px] text-emerald-650 block">Peg Ratio</span>
-                    <strong className="text-emerald-300">0.92 EUR</strong>
+                    <span className="text-[8px] text-[#536877] block font-bold">Peg Ratio</span>
+                    <strong className="text-[#023547]">0.92 EUR</strong>
                   </div>
                   <div>
-                    <span className="text-[8px] text-emerald-650 block">M3 Supply</span>
-                    <strong className="text-emerald-400">€15.2T</strong>
+                    <span className="text-[8px] text-[#536877] block font-bold">M3 Supply</span>
+                    <strong className="text-[#023547]">€15.2T</strong>
                   </div>
                 </div>
               </div>
 
-              {/* Bank of Canada Node */}
-              <div className="p-5 rounded-2xl bg-[#060e08]/80 border border-emerald-950/80 flex flex-col justify-between space-y-4">
+              {/* Bank of Canada */}
+              <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] flex flex-col justify-between space-y-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="text-xs font-bold text-emerald-200">Bank of Canada (CAD)</h4>
-                    <p className="text-[9px] text-emerald-600 font-mono">boc.node.gmae.net</p>
+                    <h4 className="text-xs font-bold text-[#023547]">Bank of Canada (CAD)</h4>
+                    <p className="text-[9px] text-[#536877] font-mono">boc.node.gmae.net</p>
                   </div>
-                  <span className="flex items-center space-x-1.5 text-[9px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/25 font-bold">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>CONNECTED // 42ms</span>
+                  <span className="flex items-center space-x-1.5 text-[9px] font-mono px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                    <span>ONLINE // 42ms</span>
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-2 text-xs font-mono text-center bg-[#020503] border border-emerald-955/40 p-2.5 rounded-xl">
+                <div className="grid grid-cols-3 gap-2 text-xs font-mono text-center bg-[#f4f4f0]/60 border border-[#e1e2da] p-3 rounded-xl">
                   <div>
-                    <span className="text-[8px] text-emerald-650 block">Interest Rate</span>
-                    <strong className="text-emerald-300">4.75%</strong>
+                    <span className="text-[8px] text-[#536877] block font-bold">Interest</span>
+                    <strong className="text-[#023547]">4.75%</strong>
                   </div>
                   <div>
-                    <span className="text-[8px] text-emerald-650 block">Peg Ratio</span>
-                    <strong className="text-emerald-300">1.35 CAD</strong>
+                    <span className="text-[8px] text-[#536877] block font-bold">Peg Ratio</span>
+                    <strong className="text-[#023547]">1.35 CAD</strong>
                   </div>
                   <div>
-                    <span className="text-[8px] text-emerald-650 block">M3 Supply</span>
-                    <strong className="text-emerald-400">$2.8T</strong>
+                    <span className="text-[8px] text-[#536877] block font-bold">M3 Supply</span>
+                    <strong className="text-[#023547]">$2.8T</strong>
                   </div>
                 </div>
               </div>
 
-              {/* Bank Indonesia Node */}
-              <div className="p-5 rounded-2xl bg-[#060e08]/80 border border-emerald-950/80 flex flex-col justify-between space-y-4">
+              {/* Bank Indonesia */}
+              <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] flex flex-col justify-between space-y-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="text-xs font-bold text-emerald-200">Bank Indonesia Node (IDR)</h4>
-                    <p className="text-[9px] text-emerald-600 font-mono">bi.node.gmae.net</p>
+                    <h4 className="text-xs font-bold text-[#023547]">Bank Indonesia (IDR)</h4>
+                    <p className="text-[9px] text-[#536877] font-mono">bi.node.gmae.net</p>
                   </div>
-                  <span className="flex items-center space-x-1.5 text-[9px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/25 font-bold">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>CONNECTED // 8ms</span>
+                  <span className="flex items-center space-x-1.5 text-[9px] font-mono px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                    <span>ONLINE // 8ms</span>
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-2 text-xs font-mono text-center bg-[#020503] border border-emerald-955/40 p-2.5 rounded-xl">
+                <div className="grid grid-cols-3 gap-2 text-xs font-mono text-center bg-[#f4f4f0]/60 border border-[#e1e2da] p-3 rounded-xl">
                   <div>
-                    <span className="text-[8px] text-emerald-650 block">Interest Rate</span>
-                    <strong className="text-emerald-300">6.25%</strong>
+                    <span className="text-[8px] text-[#536877] block font-bold">Interest</span>
+                    <strong className="text-[#023547]">6.25%</strong>
                   </div>
                   <div>
-                    <span className="text-[8px] text-emerald-650 block">Peg Ratio</span>
-                    <strong className="text-emerald-300">16,350 IDR</strong>
+                    <span className="text-[8px] text-[#536877] block font-bold">Peg Ratio</span>
+                    <strong className="text-[#023547]">16,350 IDR</strong>
                   </div>
                   <div>
-                    <span className="text-[8px] text-emerald-650 block">M3 Supply</span>
-                    <strong className="text-emerald-400">Rp 8.900T</strong>
+                    <span className="text-[8px] text-[#536877] block font-bold">M3 Supply</span>
+                    <strong className="text-[#023547]">Rp 8.900T</strong>
                   </div>
                 </div>
               </div>
@@ -1016,28 +973,28 @@ export default function CentralBankDashboard() {
             </div>
 
             {/* QUICK ACTIONS BOARD */}
-            <div className="p-5 rounded-2xl bg-[#060e08]/80 border border-emerald-950/80">
-              <h4 className="text-xs font-black uppercase tracking-widest text-emerald-300 mb-3">Reserve Bridge Controls</h4>
+            <div className="p-6 rounded-2xl bg-white border border-[#e1e2da] space-y-3">
+              <h4 className="text-xs font-black uppercase tracking-widest text-[#023547]">Reserve Action Bridge</h4>
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => {
-                    setOilPrice(150);
+                    setOilPrice(155);
                     setActiveTab('governor');
-                    alert('Oracle Oil Price set to $150 / bbl (Systemic Inflation Shock). Run a simulation state to commit this ledger block.');
+                    alert('Oracle Oil Price set to $155 / barrel (Supply Inflation Shock).');
                   }}
-                  className="px-4 py-2.5 rounded-xl bg-rose-950/20 border border-rose-500/20 text-rose-400 font-bold uppercase text-[10px] hover:bg-[#1a0808]/40 transition-all cursor-pointer animate-pulse"
+                  className="px-4 py-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 font-bold uppercase text-[10px] hover:bg-rose-100 transition-all cursor-pointer"
                 >
-                  Simulate Oil Price Shock ($150 / barrel)
+                  Simulate Oil Price Shock ($155)
                 </button>
                 <button
                   onClick={() => {
-                    setGoldPrice(3200);
+                    setGoldPrice(3250);
                     setActiveTab('governor');
-                    alert('Oracle Gold Price set to $3,200 / oz (Reserve Safe-Haven Influx). Run a simulation state to commit this ledger block.');
+                    alert('Oracle Gold Price set to $3,250 / oz (Physical Gold-backed Reserve boost).');
                   }}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-950/30 border border-emerald-500/25 text-emerald-300 font-bold uppercase text-[10px] hover:bg-emerald-950/50 transition-all cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-[#008082]/10 border border-[#008082]/20 text-[#008082] font-bold uppercase text-[10px] hover:bg-[#008082]/20 transition-all cursor-pointer"
                 >
-                  Boost Gold Reserve Backing ($3,200 / oz)
+                  Simulate Gold Reserve Influx ($3,250)
                 </button>
               </div>
             </div>
@@ -1047,9 +1004,9 @@ export default function CentralBankDashboard() {
 
       </div>
 
-      {/* ULTRA-CLEAN SLIM FOOTER */}
-      <footer className="border-t border-emerald-950/60 bg-[#030804] py-3 text-center text-[9px] text-emerald-600 font-mono tracking-widest uppercase">
-        GMAE Autonomous Sovereign Ledger Core // database peg integration active // neon cloud node sync
+      {/* FOOTER */}
+      <footer className="border-t border-[#e1e2da] bg-white py-4 text-center text-[10px] text-[#536877] font-mono tracking-widest uppercase">
+        GMAE Sovereign System Ledger © 2026 // Connected to Cloud Database
       </footer>
 
     </div>
